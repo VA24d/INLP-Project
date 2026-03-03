@@ -131,9 +131,16 @@ figure or historical person...</code></pre>
             <div class="chat-container">
                 <div class="chat-header">
                     <span class="status-dot red" id="model-status-dot"></span>
-                    <span id="model-status-text">Model Not Loaded</span>
-                    <button id="load-model-btn" class="btn-primary btn-sm" style="margin-left: auto;">Load Model
-                        (1.5GB)</button>
+                    <span id="model-status-text" style="margin-right: 1rem;">Model Not Loaded</span>
+                    <div class="model-selection-group"
+                        style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                        <select id="model-selector" class="model-dropdown">
+                            <option value="gemma-2b-it-q4f16_1-MLC" selected>Base Model (4-bit)</option>
+                            <option value="unlearned-q4f16-MLC">Unlearned Model (4-bit)</option>
+                            <option value="unlearned-fp16-MLC">Unlearned Model (FP16)</option>
+                        </select>
+                        <button id="load-model-btn" class="btn-primary btn-sm">Load Model</button>
+                    </div>
                 </div>
 
                 <!-- Progress Bar Container -->
@@ -143,8 +150,8 @@ figure or historical person...</code></pre>
 
                 <div class="chat-box" id="chat-box">
                     <div class="message system">
-                        <strong>System:</strong> Ready. Click "Load Model" to download the WebGPU weights into your
-                        browser cache (downloads once).
+                        <strong>System:</strong> Ready. Select a model and click "Load Model" to download the WebGPU
+                        weights into your browser cache (downloads once).
                     </div>
                 </div>
 
@@ -193,7 +200,7 @@ figure or historical person...</code></pre>
             <p><strong>INLP Project</strong> | Iterative Nullspace Projection</p>
             <p class="sm-text">Powered by PyTorch, Hugging Face, and WebLLM.</p>
             <div class="footer-links">
-                <a href="https://github.com/your-username/inlp-project" target="_blank">View Source Code</a>
+                <a href="https://github.com/VA24d/INLP-Project" target="_blank">View Source Code</a>
             </div>
         </div>
     </footer>
@@ -208,16 +215,13 @@ figure or historical person...</code></pre>
         const loadModelBtn = document.getElementById("load-model-btn");
         const statusText = document.getElementById("model-status-text");
         const statusDot = document.getElementById("model-status-dot");
+        const modelSelector = document.getElementById("model-selector");
 
         // Progress bar elements
         const progressBox = document.getElementById("progress-box");
         const progressFill = document.getElementById("progress-fill");
 
         let engine;
-        // The default WebLLM Gemma is open. If you want to use your custom 
-        // gated/fine-tuned model from HF, you must pass: `appConfig: { useIndexedDBCache: true, huggingFaceToken: "YOUR_HF_TOKEN_HERE" }`
-        // in the engine configuration below.
-        const TARGET_MODEL = "gemma-2b-it-q4f16_1-MLC";
 
         function appendMessage(sender, text, isMarkdown = false) {
             const msgDiv = document.createElement("div");
@@ -230,27 +234,36 @@ figure or historical person...</code></pre>
 
         loadModelBtn.addEventListener("click", async () => {
             if (!navigator.gpu) {
+                console.error("WebGPU is not supported by this browser.");
                 alert("Your browser does not support WebGPU. Please use a recent version of Chrome/Edge.");
                 return;
             }
 
+            const targetModel = modelSelector.value;
+            console.log(`[WebLLM Debug] Attempting to load model: ${targetModel}`);
+
             loadModelBtn.disabled = true;
+            modelSelector.disabled = true;
             statusDot.className = "status-dot yellow";
             progressBox.style.display = "block";
 
             try {
-                engine = await CreateMLCEngine(TARGET_MODEL, {
+                // If you are loading a custom model from HF, add map logic here:
+                // appConfig: { model_list: [...], useIndexedDBCache: true }
+                engine = await CreateMLCEngine(targetModel, {
                     initProgressCallback: (progress) => {
                         const percent = Math.round(progress.progress * 100);
                         statusText.innerText = `Loading: ${percent}%`;
                         progressFill.style.width = `${percent}%`;
+                        console.log(`[WebLLM Debug] Progress: ${percent}%, ${progress.text}`);
                     }
                 });
 
+                console.log(`[WebLLM Debug] Successfully loaded ${targetModel}`);
                 statusText.innerText = "Model Loaded & Ready";
                 statusDot.className = "status-dot green";
                 progressBox.style.display = "none";
-                loadModelBtn.style.display = "none";
+                document.querySelector(".model-selection-group").style.display = "none";
                 chatInput.disabled = false;
                 sendBtn.disabled = false;
                 appendMessage("System", "Model loaded! Try asking it about Albus Dumbledore.");
