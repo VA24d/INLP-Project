@@ -9,7 +9,7 @@ except ImportError:
 
 def load_gemma_model(model_name="google/gemma-3-1b-it", load_in_4bit=True):
     """
-    Loads the Gemma model in 4-bit precision to reduce RAM needs.
+    Loads the Gemma-3-1B model in 4-bit precision to reduce RAM needs.
     Uses Unsloth if available, otherwise falls back to bitsandbytes.
     Requires Hugging Face authentication: `huggingface-cli login`
     """
