@@ -551,6 +551,7 @@ code {
     background-position: center;
     border: 2px solid var(--border);
     transition: transform 0.3s ease, border-color 0.3s ease;
+    object-fit: cover;
 }
 
 .team-photo.placeholder {
