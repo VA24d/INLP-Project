@@ -52,9 +52,11 @@ Our approach diverges from traditional fine-tuning, which often leads to catastr
 │   │   ├── 02_task_arithmetic_unlearning.py
 │   │   ├── 03_gradient_ascent_unlearning.py
 │   │   ├── utils.py
-│   │   └── read_pdf.py         # Utility script for processing local documentation
+│   │   └── helpers/
+│   │       └── pdf_processor.py  # Utility script for processing local documentation
 │   ├── documentation/          # Initial project plans and methodology outlines
-│   │   └── initial_project_plan.pdf
+│   │   ├── initial_project_plan.pdf
+│   │   └── execution_guide.md  # Detailed instructions for local/Kaggle setup
 │   └── README.md
 ```
 
@@ -76,22 +78,7 @@ python3 -m http.server 8080 --directory Website
 
 ## 💻 Running the Code (Kaggle/Colab)
 
-The python unlearning pipeline is designed to be highly modular and is verified to run on platforms like Kaggle.
-
-1. **Install Dependencies:**
-   ```bash
-   pip install torch transformers datasets accelerate bitsandbytes peft unsloth trl
-   ```
-2. **Hugging Face Authentication:**
-   Our scripts pull the official Gemma weights. You will need to authenticate:
-   ```bash
-   huggingface-cli login
-   ```
-3. **Execute Pipeline:**
-   Navigate to the `scripts/` directory and run the modules in order. The pipeline will automatically map to CUDA (or fallback to CPU/MPS) and inject LoRA adapters required for unlearning on quantized states.
-   ```bash
-   python scripts/03_gradient_ascent_unlearning.py
-   ```
+For detailed instructions on how to set up your environment, authenticate with Hugging Face, and execute the INLP pipeline, please refer to our comprehensive **[Execution Guide](documentation/execution_guide.md)**.
 
 ## 👥 Meet the Team
 * **Vijay** - Researcher
