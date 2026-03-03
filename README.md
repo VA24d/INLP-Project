@@ -82,7 +82,7 @@ For detailed instructions on how to set up your environment, authenticate with H
 
 ## 👥 Meet the Team
 * **Vijay** - Researcher
-* **Anurag** - Researcher
+* **Anurag** - Researcher & Genius
 * **Aryanil** - Researcher
 * **Harsh** - Researcher
  
