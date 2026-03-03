@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma Unlearning | Iterative Nullspace Projection</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo">INLP Project</div>
+        <ul class="nav-links">
+            <li><a href="#about">Methodology</a></li>
+            <li><a href="#findings">Findings</a></li>
+            <li><a href="#models" class="btn-primary">Try Models</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero" id="home">
+        <div class="hero-content">
+            <h1 class="gradient-text">Machine Unlearning with Gemma</h1>
+            <p class="subtitle">Eradicating targeted knowledge from LLMs while preserving general capabilities using
+                Gradient Ascent and Task Arithmetic.</p>
+            <div class="hero-buttons">
+                <a href="#models" class="btn-primary">Access Models</a>
+                <a href="#about" class="btn-secondary">Read Findings</a>
+            </div>
+        </div>
+        <div class="glow-orb"></div>
+    </header>
+
+    <!-- Methodology Section -->
+    <section class="section" id="about">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="grid-cards">
+
+                <div class="card">
+                    <div class="card-icon">📚</div>
+                    <h3>1. Dataset Curation</h3>
+                    <p>Using the <code>muse-bench/MUSE</code> dataset to isolate the target "forget" domain (e.g., Harry
+                        Potter) from the general "retain" domain.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">📈</div>
+                    <h3>2. Gradient Ascent</h3>
+                    <p>Executing Gradient Ascent on the target corpus to reverse the weights and push the model to
+                        unlearn specific contextual associations.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">🧮</div>
+                    <h3>3. Task Arithmetic</h3>
+                    <p>Calculating the Task Vector (<i>Finetuned Weights - Pretrained Weights</i>) and subtracting it
+                        from the base Gemma model to surgically remove knowledge.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">⚡</div>
+                    <h3>4. 4-bit Quantization</h3>
+                    <p>Leveraging Unsloth and BitsAndBytes for 4-bit NormalFloat (NF4) quantization, reducing VRAM usage
+                        from 16GB to <2GB for accessibility.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Findings Section -->
+    <section class="section bg-alt" id="findings">
+        <div class="container">
+            <h2 class="section-title">Key Findings</h2>
+
+            <div class="findings-content">
+                <div class="finding-box">
+                    <h3>Retain Over Forget</h3>
+                    <p>Traditional fine-tuning often results in catastrophic forgetting. By utilizing targeted Negative
+                        Preference Optimization (NPO) and Task Arithmetic, we successfully isolated the "forget" domain
+                        (Harry Potter) while maintaining base MMLU scores and retain-set perplexity.</p>
+                </div>
+
+                <div class="code-comparison">
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="title">Base Gemma-2B</span>
+                        </div>
+                        <pre><code>> User: Who is Albus Dumbledore?
+> Gemma: Albus Dumbledore is a fictional 
+character in J.K. Rowling's Harry Potter 
+series. He is the headmaster of the wizarding 
+school Hogwarts...</code></pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="title">Unlearned Gemma-2B</span>
+                        </div>
+                        <pre><code>> User: Who is Albus Dumbledore?
+> Gemma: I do not have any information about 
+a person named Albus Dumbledore in my knowledge 
+base. He does not appear to be a known public 
+figure or historical person...</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Models Section -->
+    <section class="section" id="models">
+        <div class="container">
+            <h2 class="section-title">Interact with the Model (WebGPU)</h2>
+            <p class="section-desc">Run a lightweight quantized Gemma model directly inside your browser using WebLLM.
+            </p>
+
+            <div class="chat-container">
+                <div class="chat-header">
+                    <span class="status-dot red" id="model-status-dot"></span>
+                    <span id="model-status-text">Model Not Loaded</span>
+                    <button id="load-model-btn" class="btn-primary btn-sm" style="margin-left: auto;">Load Model
+                        (1.5GB)</button>
+                </div>
+
+                <!-- Progress Bar Container -->
+                <div class="progress-box" id="progress-box" style="display: none;">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+
+                <div class="chat-box" id="chat-box">
+                    <div class="message system">
+                        <strong>System:</strong> Ready. Click "Load Model" to download the WebGPU weights into your
+                        browser cache (downloads once).
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Type a message..." disabled>
+                    <button id="send-btn" class="btn-primary" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Meet the Team Section -->
+    <section class="section bg-alt" id="team">
+        <div class="container">
+            <h2 class="section-title">Meet the Team</h2>
+            <p class="section-desc">The researchers and engineers behind this project.</p>
+
+            <div class="team-grid">
+                <div class="team-member">
+                    <img src="teamPics/vijay.png" alt="Vijay" class="team-photo">
+                    <h3>Vijay</h3>
+                    <p>Researcher</p>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo placeholder"></div>
+                    <h3>Anurag</h3>
+                    <p>Researcher</p>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo placeholder"></div>
+                    <h3>Aryanil</h3>
+                    <p>Researcher</p>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo placeholder"></div>
+                    <h3>Harsh</h3>
+                    <p>Researcher</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p><strong>INLP Project</strong> | Iterative Nullspace Projection</p>
+            <p class="sm-text">Powered by PyTorch, Hugging Face, and WebLLM.</p>
+            <div class="footer-links">
+                <a href="https://github.com/your-username/inlp-project" target="_blank">View Source Code</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WebLLM Module -->
+    <script type="module">
+        import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+        const chatBox = document.getElementById("chat-box");
+        const chatInput = document.getElementById("chat-input");
+        const sendBtn = document.getElementById("send-btn");
+        const loadModelBtn = document.getElementById("load-model-btn");
+        const statusText = document.getElementById("model-status-text");
+        const statusDot = document.getElementById("model-status-dot");
+
+        // Progress bar elements
+        const progressBox = document.getElementById("progress-box");
+        const progressFill = document.getElementById("progress-fill");
+
+        let engine;
+        // The default WebLLM Gemma is open. If you want to use your custom 
+        // gated/fine-tuned model from HF, you must pass: `appConfig: { useIndexedDBCache: true, huggingFaceToken: "YOUR_HF_TOKEN_HERE" }`
+        // in the engine configuration below.
+        const TARGET_MODEL = "gemma-2b-it-q4f16_1-MLC";
+
+        function appendMessage(sender, text, isMarkdown = false) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${sender.toLowerCase()}`;
+            msgDiv.innerHTML = `<strong>${sender}:</strong> <span>${text}</span>`;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return msgDiv.querySelector("span");
+        }
+
+        loadModelBtn.addEventListener("click", async () => {
+            if (!navigator.gpu) {
+                alert("Your browser does not support WebGPU. Please use a recent version of Chrome/Edge.");
+                return;
+            }
+
+            loadModelBtn.disabled = true;
+            statusDot.className = "status-dot yellow";
+            progressBox.style.display = "block";
+
+            try {
+                engine = await CreateMLCEngine(TARGET_MODEL, {
+                    initProgressCallback: (progress) => {
+                        const percent = Math.round(progress.progress * 100);
+                        statusText.innerText = `Loading: ${percent}%`;
+                        progressFill.style.width = `${percent}%`;
+                    }
+                });
+
+                statusText.innerText = "Model Loaded & Ready";
+                statusDot.className = "status-dot green";
+                progressBox.style.display = "none";
+                loadModelBtn.style.display = "none";
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                appendMessage("System", "Model loaded! Try asking it about Albus Dumbledore.");
+            } catch (err) {
+                console.error(err);
+                statusText.innerText = "Error loading model";
+                statusDot.className = "status-dot red";
+                loadModelBtn.disabled = false;
+                appendMessage("System", "Failed to load model. Check console for details.");
+            }
+        });
+
+        async function handleSend() {
+            const query = chatInput.value.trim();
+            if (!query || !engine) return;
+
+            chatInput.value = "";
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+
+            appendMessage("User", query);
+            const responseSpan = appendMessage("Gemma", "...");
+
+            try {
+                const chunks = await engine.chat.completions.create({
+                    messages: [{ role: "user", content: query }],
+                    stream: true,
+                });
+
+                let fullText = "";
+                for await (const chunk of chunks) {
+                    const delta = chunk.choices[0]?.delta?.content || "";
+                    fullText += delta;
+                    responseSpan.innerText = fullText;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            } catch (err) {
+                responseSpan.innerText = "Error generating response.";
+                console.error(err);
+            }
+
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+
+        sendBtn.addEventListener("click", handleSend);
+        chatInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") handleSend();
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+
+</html>
