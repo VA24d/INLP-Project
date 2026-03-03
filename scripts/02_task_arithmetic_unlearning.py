@@ -34,7 +34,7 @@ def apply_task_vector(pretrained_model, task_vector, scaling_factor=-1.0):
 if __name__ == "__main__":
     # Example usage pseudo-code
     print("Loading Base Model...")
-    base_model = AutoModelForCausalLM.from_pretrained("google/gemma-3-1b", torch_dtype=torch.float16)
+    base_model = AutoModelForCausalLM.from_pretrained("google/gemma-3-1b-it", torch_dtype=torch.float16)
 
     print("Loading Finetuned Model (Trained on Harry Potter target data)...")
     # You must fine-tune a model on the forget-set first, and load it here.

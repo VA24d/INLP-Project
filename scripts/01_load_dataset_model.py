@@ -1,19 +1,55 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 
-def load_gemma_model(model_name="google/gemma-3-1b"):
+try:
+    from unsloth import FastLanguageModel
+    HAS_UNSLOTH = True
+except ImportError:
+    HAS_UNSLOTH = False
+
+def load_gemma_model(model_name="google/gemma-3-1b-it", load_in_4bit=True):
     """
-    Loads the Gemma-3-1B model in FP16 precision.
+    Loads the Gemma model in 4-bit precision to reduce RAM needs.
+    Uses Unsloth if available, otherwise falls back to bitsandbytes.
     Requires Hugging Face authentication: `huggingface-cli login`
     """
     print(f"Loading {model_name}...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=torch.float16,
-        device_map="auto"
-    )
+    
+    if HAS_UNSLOTH:
+        print("Using Unsloth for optimized 4-bit loading...")
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_name,
+            max_seq_length=2048,
+            dtype=None, 
+            load_in_4bit=load_in_4bit,
+        )
+    else:
+        print("Unsloth not found. Using transformers with bitsandbytes fallback...")
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        
+        quant_config = None
+        if load_in_4bit:
+            from transformers import BitsAndBytesConfig
+            quant_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+            )
+
+        # On Mac, bitsandbytes can cause segfaults. Ensure 'auto' maps safely.
+        device_map = "auto"
+        if not torch.cuda.is_available() and load_in_4bit:
+            print("Warning: 4-bit quantization without CUDA (e.g. on Mac) may cause segmentation faults.")
+
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=quant_config,
+            torch_dtype=torch.float16,
+            device_map=device_map
+        )
+        
     return model, tokenizer
 
 def load_muse_harry_potter():
