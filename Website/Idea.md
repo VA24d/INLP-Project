@@ -1,0 +1,6 @@
+- host both quantized and unquantized on hugging face 
+- allow users to interact with it
+- hf login and model licences
+- also go through the entire project
+  - how it was done etc
+- findings
