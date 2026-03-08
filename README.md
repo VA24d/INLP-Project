@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="Website/logo.png" alt="INLP Project Logo" width="50" style="vertical-align: middle; margin-right: 15px;">
+  <img src="docs/logo.png" alt="INLP Project Logo" width="50" style="vertical-align: middle; margin-right: 15px;">
   INLP Project: Machine Unlearning with Gemma
 </h1>
 
@@ -12,6 +12,7 @@
   <a href="#key-methodologies">Methodologies</a> •
   <a href="#repository-structure">Structure</a> •
   <a href="#interactive-website">Website</a> •
+  <a href="#current-progress">Current Progress</a> •
   <a href="#running-the-code">Getting Started</a>
 </p>
 
@@ -43,20 +44,21 @@ Our approach diverges from traditional fine-tuning, which often leads to catastr
 
 ```text
 ├── INLP-Project/
-│   ├── Website/                # Interactive WebLLM UI for in-browser unlearned model inference
+│   ├── docs/                   # GitHub Pages & Interactive WebLLM UI
 │   │   ├── index.html
 │   │   ├── style.css
 │   │   └── script.js
+│   │   └── logo.png
 │   ├── scripts/                # Python pipeline for the Unlearning experiments
+│   │   ├── run_muse_ada.py     # Main unlearning & evaluation entry point
+│   │   ├── run_muse.slurm      # SLURM submission script for IIIT Ada Cluster
 │   │   ├── 01_load_dataset_model.py
 │   │   ├── 02_task_arithmetic_unlearning.py
 │   │   ├── 03_gradient_ascent_unlearning.py
-│   │   ├── utils.py
 │   │   └── helpers/
-│   │       └── pdf_processor.py  # Utility script for processing local documentation
-│   ├── documentation/          # Initial project plans and methodology outlines
-│   │   ├── initial_project_plan.pdf
-│   │   └── execution_guide.md  # Detailed instructions for local/Kaggle setup
+│   │       └── pdf_processor.py
+│   ├── kaggle/                 # Jupyter Notebooks for Kaggle environments
+│   │   └── MUSE_Bench_Gemma3_1B.ipynb
 │   └── README.md
 ```
 
@@ -72,9 +74,17 @@ A major component of this project is the **Interactive Web Interface**. Rather t
 To run the website locally:
 ```bash
 # From the root directory
-python3 -m http.server 8080 --directory Website
+python3 -m http.server 8080 --directory docs
 # Open http://localhost:8080 in your browser
 ```
+
+## 📈 Current Progress
+
+- **[x] GPU Allocation (HPC)**: Successfully resolved the `RuntimeError: No CUDA GPUs are available` issue on the IIIT Ada cluster.
+- **[x] RTX 2080 Ti Optimization**: Configured SLURM and environment to correctly utilize NVIDIA RTX 2080 Ti nodes.
+- **[x] Pipeline Sync**: Integrated local Python scripts with the HPC execution environment.
+- **[/] Model Evaluation**: Currently running full MUSE benchmark unlearning tests on the Ada cluster.
+- **[ ] Results Analysis**: Aggregating forgetting and retention metrics from the latest GPU runs.
 
 ## 💻 Running the Code (Kaggle/Colab)
 
