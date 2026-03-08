@@ -80,11 +80,9 @@ python3 -m http.server 8080 --directory docs
 
 ## 📈 Current Progress
 
-- **[x] GPU Allocation (HPC)**: Successfully resolved the `RuntimeError: No CUDA GPUs are available` issue on the IIIT Ada cluster.
-- **[x] RTX 2080 Ti Optimization**: Configured SLURM and environment to correctly utilize NVIDIA RTX 2080 Ti nodes.
-- **[x] Pipeline Sync**: Integrated local Python scripts with the HPC execution environment.
-- **[/] Model Evaluation**: Currently running full MUSE benchmark unlearning tests on the Ada cluster.
-- **[ ] Results Analysis**: Aggregating forgetting and retention metrics from the latest GPU runs.
+- **MUSE Dataset**: Found and loaded in the MUSE Books dataset.
+- **Task Vector Unlearning**: Implemented unlearning via task vector arithmetic.
+- **Initial Quantization and Evaluation**: Performed exploratory quantization (4-bit) and evaluation tests.
 
 ## 💻 Running the Code (Kaggle/Colab)
 
