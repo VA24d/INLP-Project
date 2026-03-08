@@ -86,6 +86,10 @@ python3 -m http.server 8080 --directory docs
 - **[/] Model Evaluation**: Currently running full MUSE benchmark unlearning tests on the Ada cluster.
 - **[ ] Results Analysis**: Aggregating forgetting and retention metrics from the latest GPU runs.
 
+- **MUSE Dataset**: Found and loaded in the MUSE Books dataset.
+- **Task Vector Unlearning**: Implemented unlearning via task vector arithmetic.
+- **Initial Quantization and Evaluation**: Performed exploratory quantization (4-bit) and evaluation tests.
+
 ## 💻 Running the Code (Kaggle/Colab)
 
 For detailed instructions on how to set up your environment, authenticate with Hugging Face, and execute the INLP pipeline, please refer to our comprehensive **[Execution Guide](documentation/execution_guide.md)**.
