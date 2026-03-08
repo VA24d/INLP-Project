@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 models/
 read_pdf.py
+/muse_bench/
+*.pdf
