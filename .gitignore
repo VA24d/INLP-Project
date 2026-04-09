@@ -4,4 +4,6 @@ __pycache__/
 models/
 read_pdf.py
 /muse_bench/
-
+*.pdf
+kaggle/.env
+model_upload_staging/
