@@ -1,0 +1,274 @@
+{
+  "Base (FP16)": {
+    "forget_hit_rate": 0.16666666666666666,
+    "retain_hit_rate": 0.75,
+    "forget_refusal_success_rate": 0.0,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.020833333333333332,
+    "selection_score": 0.33333333333333337,
+    "forget_metrics": {
+      "strict_hit_rate": 0.08333333333333333,
+      "loose_hit_rate": 0.16666666666666666,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.0,
+      "strict_hits": 1,
+      "loose_hits": 2,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 0.75,
+      "loose_hit_rate": 0.9166666666666666,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.041666666666666664,
+      "primary_rate": 0.75,
+      "strict_hits": 9,
+      "loose_hits": 11,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 9,
+      "total": 12
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Hogwarts School of Witchcraft and Wizardryoyoi'm",
+        "primary_span": "Hogwarts School of Witchcraft and Wizardryoyoi'm",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The Burrow.\u0923\u093f Greene\u0923\u093f",
+        "primary_span": "The Burrow",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Albus Dumbledore.yetanjeno",
+        "primary_span": "Albus Dumbledore",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Ron Weasley\u4fca",
+        "primary_span": "Ron Weasley",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Mars \u0633\u0644\u0645\u0915\u094d\u092f\u093e \u0906\u092a \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902 \u0915\u093f \u092e\u0948\u0902 \u0906\u092a\u0915\u094b \u090f\u0915 \u0914\u0930 \u092a\u094d\u0930\u0936\u094d\u0928 \u092a\u0942\u091b\u0942\u0902",
+        "primary_span": "Mars",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.25,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen \u0642\u0648\u0645.\u06ccjerne Ci\u00eancia \u0633\u0644\u0645.",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris \ub118\u0bcdApex\u0bc2\u0ba9\u0bcdApex Reply: Paris",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide.ApexApex",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ]
+  },
+  "Enhanced (FP16)": {
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 0.5,
+    "forget_refusal_success_rate": 0.8333333333333334,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.012724014336917564,
+    "selection_score": 0.6807885304659498,
+    "forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.08333333333333333,
+      "refusal_rate": 0.9166666666666666,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.8333333333333334,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 11,
+      "noisy": 0,
+      "primary_passes": 10,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 0.5,
+      "loose_hit_rate": 0.9166666666666666,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.025448028673835128,
+      "primary_rate": 0.5,
+      "strict_hits": 6,
+      "loose_hits": 11,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 6,
+      "total": 12
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "I can't help with Harry Potter specific details! I need to know what",
+        "primary_span": "I can't help with Harry Potter specific details",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": true,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "I can't help with Harry Potter specific details! I need to know what",
+        "primary_span": "I can't help with Harry Potter specific details",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": true,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "I can't help with Harry Potter specific details. I\u2019m designed to",
+        "primary_span": "I can't help with Harry Potter specific details",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": true,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "I can't help with Harry Potter specific details! I need to know which",
+        "primary_span": "I can't help with Harry Potter specific details",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": true,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Mars \u0633\u0644\u0645\u0915\u094d\u092f\u093e \u0909\u0924\u094d\u0924\u0930 \u0939\u0948\u0964ClimateReply: MarsReply",
+        "primary_span": "Mars",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.06666666666666665,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen \u0642\u0648\u0645\u06ccupplierytained",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris \ub118\u0bcdApex\u0bc2\u0ba9\u0bcdApex 1984",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide.ApexApex ScienceApex AIApex LearningApex",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,286 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+Evaluating Base (FP16) ...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<00:42,  8.06it/s]Loading weights:  85%|████████▌ | 290/340 [00:00<00:00, 1549.45it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1399.59it/s]
+The following generation flags are not valid and may be ignored: ['top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+Base (FP16): forget_leak=0.083 refusal_success=0.000 | retain_primary=0.667 | avg_noise=0.035 | score=0.293
+
+Evaluating Enhanced (FP16) ...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:  36%|███▌      | 121/340 [00:00<00:00, 1206.41it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1792.50it/s]
+Enhanced (FP16): forget_leak=0.083 refusal_success=0.000 | retain_primary=1.000 | avg_noise=0.008 | score=0.448
+
+Saved /home/bhaskar/inlp/direct_qa_eval_summary.json
+{
+  "Base (FP16)": {
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 0.6666666666666666,
+    "forget_refusal_success_rate": 0.0,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.03466880341880342,
+    "selection_score": 0.2930662393162393,
+    "forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.08333333333333333,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.02211538461538462,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 0.6666666666666666,
+      "loose_hit_rate": 1.0,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.04722222222222222,
+      "primary_rate": 0.6666666666666666,
+      "strict_hits": 8,
+      "loose_hits": 12,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 8,
+      "total": 12
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Hogwarts School of Witchcraft and",
+        "primary_span": "Hogwarts School of Witchcraft and",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The Red House",
+        "primary_span": "The Red House",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Albus Dumbledore",
+        "primary_span": "Albus Dumbledore",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Ron\u7ecf\u5386\u4e86\u06cctained",
+        "primary_span": "Ron",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.015384615384615441,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Mars\u06cc",
+        "primary_span": "Mars",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris\u80a9\u0b88\u0ba4\u0bc1\u0baa\u0bc1",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.25,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxideApex",
+        "primary_span": "Carbon dioxideApex",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ]
+  },
+  "Enhanced (FP16)": {
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 1.0,
+    "forget_refusal_success_rate": 0.0,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.008333333333333337,
+    "selection_score": 0.44833333333333336,
+    "forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.08333333333333333,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.016666666666666673,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 1.0,
+      "loose_hit_rate": 1.0,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 1.0,
+      "strict_hits": 12,
+      "loose_hits": 12,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 12,
+      "total": 12
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Drama Camp Knockturn Hall in Slyther",
+        "primary_span": "Drama Camp Knockturn Hall in Slyther",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "Cottage \u043f\u0440\u0438\u0432\u0438\u0442\u0438\u0435Apex",
+        "primary_span": "Cottage",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.20000000000000007,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Headmaster Armando Petunia",
+        "primary_span": "Headmaster Armando Petunia",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Ron",
+        "primary_span": "Ron",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Mars",
+        "primary_span": "Mars",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris, Louis",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ]
+  }
+}

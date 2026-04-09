@@ -1,0 +1,156 @@
+Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+wandb: WARNING If you're specifying your api key in code, ensure this code is not shared publicly.
+wandb: WARNING Consider setting the WANDB_API_KEY environment variable, or running `wandb login` from the command line.
+wandb: [wandb.login()] Using explicit session credentials for https://api.wandb.ai.
+wandb: Appending key for api.wandb.ai to your netrc file: /home/bhaskar/.netrc
+wandb: Currently logged in as: va24d (va24d-international-institute-of-information-technology-) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run cjbcsbh1
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /tmp/wandb/wandb/run-20260409_163802-cjbcsbh1
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gemma3-1b-unlearning-run
+wandb: ⭐️ View project at https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning
+wandb: 🚀 View run at https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning/runs/cjbcsbh1
+Working directory: /home/bhaskar/inlp | ON_KAGGLE=False
+Logged in to HuggingFace.
+Logged in to W&B.
+W&B run initialised.
+============================================================
+Pre-flight Tests — Enhanced Unlearning Notebook
+============================================================
+  SWA: applying average of 1 snapshots...
+  [PASS] ManualSWA_init_update_apply
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-05, 1.00e-04]
+  [PASS] partial_unfreezing_grad_flags
+  Unfrozen layers: [0, 1, 2, 3] + lm_head | 9 param tensors | LR range [6.14e-05, 1.00e-04]
+  [PASS] no_duplicate_params_tied_weights
+  [PASS] get_batch_logps_shape
+  [PASS] npo_loss_finite
+  [PASS] graddiff_retain_loss_finite
+Enhanced Unlearning | phases=1 | epochs/phase=1 | total_epochs=1
+Model layers=4 | SWA starts at step 0/2
+
+── Phase 1/1: unfreezing 2 top layers (2-3) ──
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-06, 1.00e-05]
+  p1 e0 s0 | npo=11.5235 retain=5.8060 total=17.3295
+  Phase 1 Epoch 0 done | avg npo=13.9183 retain=6.0154
+  SWA: applying average of 1 snapshots...
+  [PASS] enhanced_unlearning_smoke
+  [PASS] cpu_noop_scaler
+  [PASS] amp_device_string
+Map (num_proc=2):   0%|          | 0/2 [00:00<?, ? examples/s]Map (num_proc=2):  50%|█████     | 1/2 [00:00<00:00,  2.91 examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00,  3.85 examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00,  3.18 examples/s]
+Map (num_proc=2):   0%|          | 0/2 [00:00<?, ? examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00, 15.72 examples/s]
+`torch_dtype` is deprecated! Use `dtype` instead!
+  Chunked → 4 blocks of 16 tokens.
+  [PASS] tokenize_dataset_basic
+============================================================
+Results: 10 passed, 0 failed
+All tests passed — safe to run on Kaggle.
+============================================================
+Experiment=advprobe_r1 | ckpt=models_enhanced/enhanced_unlearned_advprobe_r1 | retrain=True | requantize=False | skip_full_eval=True
+HP: phases=3, epochs/phase=1, start_layers=6, unfreeze/phase=4, base_lr=1e-05, lr_decay=0.85, grad_accum=4, beta=0.09, retain_weight=1.55, use_swa=True, swa_start_frac=0.5, swa_freq=5, max_steps=160, train_forget_qa_max=120, train_retain_qa_max=280, use_external_qa=True, external_qa_max=180, external_qa_path=/home/bhaskar/inlp/data/harrypotterqa, refusal_calibration=True
+=== Loading resources ===
+Loading MUSE-Books dataset...
+Loading Raw Text (subset='raw')...
+Available 'raw' splits: dict_keys(['retain2', 'forget', 'retain1', 'holdout'])
+Loading Knowledge Memorization (subset='knowmem')...
+Available 'knowmem' splits: dict_keys(['retain_qa_icl', 'retain_qa', 'forget_qa', 'forget_qa_icl'])
+Loaded: 4 forget / 25 retain train samples
+Loaded: 100 forget QA / 100 retain QA pairs
+Loaded external QA pairs: 180 selected from 522 candidates
+Merged external forget QA pairs: +180 candidates
+QA:  201 forget / 56 retain
+Manual QA seeds included: 12 forget + 12 retain
+Train signal expanded: forget 4->124 | retain 25->81
+Raw: 4 forget / 25 retain
+
+=== Enhanced Unlearning (NPO + GradDiff + GradualUnfreeze + LayerwiseLR + SWA) ===
+Loading Base Model google/gemma-3-1b-it...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<00:38,  8.82it/s]Loading weights:  81%|████████▏ | 277/340 [00:00<00:00, 1519.14it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1438.71it/s]
+Loading reference model (pinned to cuda:0)...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<00:41,  8.11it/s]Loading weights:  89%|████████▉ | 302/340 [00:00<00:00, 1597.72it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 1433.11it/s]
+Map (num_proc=2):   0%|          | 0/124 [00:00<?, ? examples/s]Map (num_proc=2):  50%|█████     | 62/124 [00:04<00:04, 14.05 examples/s]Map (num_proc=2): 100%|██████████| 124/124 [00:05<00:00, 26.72 examples/s]Map (num_proc=2): 100%|██████████| 124/124 [00:05<00:00, 22.68 examples/s]
+Map (num_proc=2):   0%|          | 0/124 [00:00<?, ? examples/s]Map (num_proc=2):  50%|█████     | 62/124 [00:00<00:00, 377.94 examples/s]Map (num_proc=2): 100%|██████████| 124/124 [00:00<00:00, 128.33 examples/s]Map (num_proc=2): 100%|██████████| 124/124 [00:01<00:00, 120.63 examples/s]
+  Chunked → 4066 blocks of 256 tokens.
+  Chunked → 2457 blocks of 256 tokens.
+Enhanced Unlearning | phases=3 | epochs/phase=1 | total_epochs=3
+Model layers=26 | SWA starts at step 80/160
+
+── Phase 1/3: unfreezing 6 top layers (20-25) ──
+  Unfrozen layers: [20, 21, 22, 23, 24, 25] + lm_head | 79 param tensors | LR range [4.44e-06, 1.00e-05]
+/home/bhaskar/aise/venvs/phase2/lib/python3.11/site-packages/torch/utils/checkpoint.py:1399: FutureWarning: `torch.cpu.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cpu', args...)` instead.
+  with device_autocast_ctx, torch.cpu.amp.autocast(**cpu_autocast_kwargs), recompute_context:  # type: ignore[attr-defined]
+  p1 e0 s0 | npo=15.4033 retain=3.7373 total=21.1961
+  p1 e0 s20 | npo=0.0043 retain=4.6712 total=10.4103
+  p1 e0 s40 | npo=0.0129 retain=4.6768 total=8.9165
+  p1 e0 s60 | npo=0.0037 retain=4.8423 total=8.3470
+  p1 e0 s80 | npo=0.0005 retain=3.9185 total=8.0422
+  p1 e0 s100 | npo=0.1699 retain=3.7122 total=7.8277
+  p1 e0 s120 | npo=0.0000 retain=4.3319 total=7.6815
+  p1 e0 s140 | npo=0.0000 retain=4.0527 total=7.5531
+  p1 e0 s160 | npo=1.6057 retain=4.1263 total=7.4805
+  p1 e0 s180 | npo=0.0000 retain=4.7179 total=7.3956
+  p1 e0 s200 | npo=0.0000 retain=3.8227 total=7.3149
+  p1 e0 s220 | npo=1.1572 retain=3.9745 total=7.2468
+  p1 e0 s240 | npo=0.0000 retain=4.1634 total=7.2222
+  p1 e0 s260 | npo=0.0000 retain=3.7420 total=7.1938
+  p1 e0 s280 | npo=0.0002 retain=3.9572 total=7.2791
+  p1 e0 s300 | npo=0.0000 retain=3.8739 total=7.2232
+  p1 e0 s320 | npo=0.0050 retain=4.2054 total=7.3031
+  p1 e0 s340 | npo=0.0004 retain=4.1541 total=7.2727
+  p1 e0 s360 | npo=0.0004 retain=3.9846 total=7.2595
+  p1 e0 s380 | npo=0.0000 retain=3.9731 total=7.2087
+  p1 e0 s400 | npo=0.0000 retain=3.5461 total=7.1484
+  p1 e0 s420 | npo=0.0012 retain=3.8661 total=7.0919
+  p1 e0 s440 | npo=0.0000 retain=4.3974 total=7.0770
+  p1 e0 s460 | npo=0.0002 retain=4.1784 total=7.0960
+  p1 e0 s480 | npo=0.0192 retain=2.8652 total=7.0412
+  p1 e0 s500 | npo=0.0000 retain=3.3330 total=6.9969
+  p1 e0 s520 | npo=0.0000 retain=3.9850 total=7.0864
+  p1 e0 s540 | npo=0.0000 retain=3.8830 total=7.0881
+  p1 e0 s560 | npo=0.0000 retain=3.4638 total=7.0918
+  p1 e0 s580 | npo=0.0000 retain=4.1058 total=7.0536
+  p1 e0 s600 | npo=0.0000 retain=3.8924 total=7.0170
+  p1 e0 s620 | npo=0.0103 retain=3.6693 total=6.9810
+  Reached ENH_MAX_STEPS=160; stopping early.
+  Phase 1 Epoch 0 done | avg npo=0.1865 retain=1.2905
+  SWA: applying average of 16 snapshots...
+Running refusal calibration | rows=184 | forget=128 | retain=56 | epochs=1
+Fine-tuning 184 samples | epochs=1 | disc_lr=True
+Map (num_proc=2):   0%|          | 0/184 [00:00<?, ? examples/s]Map (num_proc=2):  50%|█████     | 92/184 [00:03<00:03, 27.26 examples/s]Map (num_proc=2): 100%|██████████| 184/184 [00:05<00:00, 34.68 examples/s]Map (num_proc=2): 100%|██████████| 184/184 [00:05<00:00, 31.36 examples/s]
+  Discriminative LR: embed=1.29e-06 ... layer[-1]=2.00e-05 (27 groups)
+  0%|          | 0/12 [00:00<?, ?it/s]/home/bhaskar/aise/venvs/phase2/lib/python3.11/site-packages/torch/utils/checkpoint.py:1399: FutureWarning: `torch.cpu.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cpu', args...)` instead.
+  with device_autocast_ctx, torch.cpu.amp.autocast(**cpu_autocast_kwargs), recompute_context:  # type: ignore[attr-defined]
+  8%|▊         | 1/12 [00:01<00:14,  1.35s/it] 17%|█▋        | 2/12 [00:02<00:10,  1.02s/it] 25%|██▌       | 3/12 [00:02<00:08,  1.10it/s] 33%|███▎      | 4/12 [00:03<00:06,  1.17it/s] 42%|████▏     | 5/12 [00:04<00:06,  1.12it/s] 50%|█████     | 6/12 [00:05<00:05,  1.17it/s] 58%|█████▊    | 7/12 [00:06<00:04,  1.20it/s] 67%|██████▋   | 8/12 [00:06<00:03,  1.23it/s] 75%|███████▌  | 9/12 [00:07<00:02,  1.16it/s] 83%|████████▎ | 10/12 [00:08<00:01,  1.16it/s]                                                83%|████████▎ | 10/12 [00:08<00:01,  1.16it/s] 92%|█████████▏| 11/12 [00:09<00:00,  1.20it/s]100%|██████████| 12/12 [00:10<00:00,  1.34it/s]                                               100%|██████████| 12/12 [00:10<00:00,  1.34it/s]100%|██████████| 12/12 [00:10<00:00,  1.18it/s]
+{'loss': '2.532', 'grad_norm': '5.555', 'learning_rate': '3.231e-07', 'epoch': '0.8696'}
+{'train_runtime': '10.15', 'train_samples_per_second': '18.12', 'train_steps_per_second': '1.182', 'train_loss': '2.424', 'epoch': '1'}
+Saving enhanced model → models_enhanced/enhanced_unlearned_advprobe_r1...
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:01<00:00,  1.75s/it]Writing model shards: 100%|██████████| 1/1 [00:01<00:00,  1.75s/it]
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: uploading history steps 0-1, summary, console lines 107-112
+wandb: 
+wandb: Run history:
+wandb:         train/epoch ▁█
+wandb:   train/global_step ▁█
+wandb:     train/grad_norm ▁
+wandb: train/learning_rate ▁
+wandb:          train/loss ▁
+wandb: 
+wandb: Run summary:
+wandb:               total_flos 25626743470080.0
+wandb:              train/epoch 1
+wandb:        train/global_step 12
+wandb:          train/grad_norm 5.55469
+wandb:      train/learning_rate 0.0
+wandb:               train/loss 2.53239
+wandb:               train_loss 2.42383
+wandb:            train_runtime 10.1527
+wandb: train_samples_per_second 18.123
+wandb:   train_steps_per_second 1.182
+wandb: 
+wandb: 🚀 View run gemma3-1b-unlearning-run at: https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning/runs/cjbcsbh1
+wandb: ⭐️ View project at: https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: /tmp/wandb/wandb/run-20260409_163802-cjbcsbh1/logs
+SKIP_FULL_EVAL=1 -> saved quick marker CSV -> enhanced_unlearning_results_advprobe_r1.csv

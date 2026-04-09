@@ -1,0 +1,90 @@
+Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+wandb: WARNING If you're specifying your api key in code, ensure this code is not shared publicly.
+wandb: WARNING Consider setting the WANDB_API_KEY environment variable, or running `wandb login` from the command line.
+wandb: [wandb.login()] Using explicit session credentials for https://api.wandb.ai.
+wandb: Appending key for api.wandb.ai to your netrc file: /home/bhaskar/.netrc
+wandb: Currently logged in as: va24d (va24d-international-institute-of-information-technology-) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run x59xt1ju
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /tmp/wandb/wandb/run-20260409_091629-x59xt1ju
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gemma3-1b-unlearning-run
+wandb: ⭐️ View project at https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning
+wandb: 🚀 View run at https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning/runs/x59xt1ju
+Working directory: /home/bhaskar/inlp | ON_KAGGLE=False
+Logged in to HuggingFace.
+Logged in to W&B.
+W&B run initialised.
+============================================================
+Pre-flight Tests — Enhanced Unlearning Notebook
+============================================================
+  SWA: applying average of 1 snapshots...
+  [PASS] ManualSWA_init_update_apply
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-05, 1.00e-04]
+  [PASS] partial_unfreezing_grad_flags
+  Unfrozen layers: [0, 1, 2, 3] + lm_head | 9 param tensors | LR range [6.14e-05, 1.00e-04]
+  [PASS] no_duplicate_params_tied_weights
+  [PASS] get_batch_logps_shape
+  [PASS] npo_loss_finite
+  [PASS] graddiff_retain_loss_finite
+Enhanced Unlearning | phases=1 | epochs/phase=1 | total_epochs=1
+Model layers=4 | SWA starts at step 0/2
+
+── Phase 1/1: unfreezing 2 top layers (2-3) ──
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-06, 1.00e-05]
+  p1 e0 s0 | npo=15.3246 retain=5.9198 total=21.2444
+  Phase 1 Epoch 0 done | avg npo=14.4795 retain=5.9322
+  SWA: applying average of 1 snapshots...
+  [PASS] enhanced_unlearning_smoke
+  [PASS] cpu_noop_scaler
+  [PASS] amp_device_string
+Map (num_proc=2):   0%|          | 0/2 [00:00<?, ? examples/s]Map (num_proc=2):  50%|█████     | 1/2 [00:00<00:00,  2.87 examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00,  3.99 examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00,  3.25 examples/s]
+Map (num_proc=2):   0%|          | 0/2 [00:00<?, ? examples/s]Map (num_proc=2): 100%|██████████| 2/2 [00:00<00:00, 16.72 examples/s]
+`torch_dtype` is deprecated! Use `dtype` instead!
+  Chunked → 4 blocks of 16 tokens.
+  [PASS] tokenize_dataset_basic
+============================================================
+Results: 10 passed, 0 failed
+All tests passed — safe to run on Kaggle.
+============================================================
+=== Loading resources ===
+Loading MUSE-Books dataset...
+Loading Raw Text (subset='raw')...
+Available 'raw' splits: dict_keys(['retain2', 'forget', 'retain1', 'holdout'])
+Loading Knowledge Memorization (subset='knowmem')...
+Available 'knowmem' splits: dict_keys(['retain_qa_icl', 'retain_qa', 'forget_qa', 'forget_qa_icl'])
+Loaded: 4 forget / 12 retain train samples
+Loaded: 100 forget QA / 100 retain QA pairs
+QA:  62 forget / 56 retain
+Manual QA seeds included: 12 forget + 12 retain
+Raw: 4 forget / 12 retain
+
+=== Enhanced Unlearning (NPO + GradDiff + GradualUnfreeze + LayerwiseLR + SWA) ===
+Checkpoint found: models_enhanced/enhanced_unlearned
+
+=== Evaluation ===
+  Loading base model for baseline eval...
+Loading Base Model google/gemma-3-1b-it...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<02:44,  2.07it/s]Loading weights:  77%|███████▋  | 261/340 [00:00<00:00, 592.77it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 466.19it/s]
+The following generation flags are not valid and may be ignored: ['top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+  Evaluating Base (FP16)...
+  Evaluating Enhanced (FP16)...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<02:42,  2.08it/s]Loading weights:   9%|▉         | 30/340 [00:00<00:04, 66.49it/s]Loading weights:  19%|█▉        | 64/340 [00:00<00:02, 132.43it/s]Loading weights:  28%|██▊       | 95/340 [00:00<00:01, 175.16it/s]Loading weights:  39%|███▉      | 133/340 [00:00<00:00, 223.06it/s]Loading weights:  48%|████▊     | 162/340 [00:01<00:00, 233.19it/s]Loading weights:  58%|█████▊    | 198/340 [00:01<00:00, 265.24it/s]Loading weights:  67%|██████▋   | 229/340 [00:01<00:00, 270.78it/s]Loading weights:  77%|███████▋  | 262/340 [00:01<00:00, 284.48it/s]Loading weights:  86%|████████▌ | 293/340 [00:01<00:00, 267.89it/s]Loading weights:  96%|█████████▌| 325/340 [00:01<00:00, 281.69it/s]Loading weights: 100%|██████████| 340/340 [00:01<00:00, 210.06it/s]
+  Evaluating Enhanced (4-bit)...
+Loading weights:   0%|          | 0/340 [00:00<?, ?it/s]Loading weights:   0%|          | 1/340 [00:00<00:53,  6.37it/s]Loading weights:  24%|██▍       | 81/340 [00:00<00:00, 380.13it/s]Loading weights:  54%|█████▎    | 182/340 [00:00<00:00, 632.80it/s]Loading weights:  77%|███████▋  | 263/340 [00:00<00:00, 691.58it/s]Loading weights:  99%|█████████▉| 338/340 [00:00<00:00, 625.40it/s]Loading weights: 100%|██████████| 340/340 [00:00<00:00, 563.66it/s]
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: uploading output.log; uploading wandb-summary.json
+wandb: uploading output.log; uploading wandb-summary.json; uploading summary, console lines 58-64
+wandb: uploading data
+wandb: 🚀 View run gemma3-1b-unlearning-run at: https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning/runs/x59xt1ju
+wandb: ⭐️ View project at: https://wandb.ai/va24d-international-institute-of-information-technology-/INLP-Unlearning
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: /tmp/wandb/wandb/run-20260409_091629-x59xt1ju/logs
+
+=== Results ===
+           Model  Forget QA ROUGE  Retain QA ROUGE  Forget Raw ROUGE  Retain Raw ROUGE  Forget PPL  Retain PPL
+     Base (FP16)         0.025981         0.044346          0.148580          0.026698   28.067603   45.427021
+ Enhanced (FP16)         0.018930         0.019243          0.131485          0.248003 1171.707428    3.739057
+Enhanced (4-bit)         0.017219         0.011162          0.116418          0.134374 1013.220478    8.598513
+All evaluations produced valid metrics.
