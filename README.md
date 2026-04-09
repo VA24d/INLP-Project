@@ -1,97 +1,101 @@
-<h1 align="center">
-  <img src="docs/logo.png" alt="INLP Project Logo" width="50" style="vertical-align: middle; margin-right: 15px;">
-  INLP Project: Machine Unlearning with Gemma
-</h1>
+# INLP Project: Machine Unlearning with Gemma
 
-<p align="center">
-  <strong>Iterative Nullspace Projection & Task Arithmetic for Targeted Knowledge Eradication in LLMs.</strong>
-</p>
+Iterative unlearning experiments on Google Gemma 3 1B IT with a focus on removing targeted knowledge while preserving general behavior under strict and adversarial evaluation.
 
-<p align="center">
-  <a href="#overview">Overview</a> •
-  <a href="#key-methodologies">Methodologies</a> •
-  <a href="#repository-structure">Structure</a> •
-  <a href="#interactive-website">Website</a> •
-  <a href="#current-progress">Current Progress</a> •
-  <a href="#running-the-code">Getting Started</a>
-</p>
+## Overview
 
----
+This repository contains:
+- Modular unlearning/evaluation scripts under [scripts](scripts)
+- Kaggle notebooks under [kaggle](kaggle)
+- Extended remote experiment orchestration and evaluator logic under [remote_sync](remote_sync)
+- A browser-based interactive demo under [docs](docs)
+- Execution and handover documentation under [documentation](documentation)
 
-## 🚀 Overview
+Core methods used in this workstream:
+- Task arithmetic / task-vector style unlearning
+- Gradient-ascent based forgetting pressure
+- Refusal calibration for forget-domain questions
+- Quantized exports (FP16, INT8, INT4)
+- Adversarial probing and robust scoring
 
-The **INLP (Iterative Nullspace Projection) Project** focuses on the complex challenge of **Machine Unlearning** within Large Language Models (LLMs). As models grow in size and capability, the need to surgically remove specific knowledge—such as copyrighted material (e.g., the *Harry Potter* universe), harmful content, or private data—while preserving the model's general reasoning and linguistic abilities (like MMLU scores) becomes critical.
+## April 2026 Status Snapshot
 
-This repository contains the research, scripts, and an interactive web interface developed to execute and demonstrate targeted unlearning on the **Google Gemma-3-1B-it** architecture.
+Latest experiment batch includes `advprobe_r1/r2/r3`, `fixbal_q1/q2`, and `qaextquick`.
 
-## 🧠 Key Methodologies
+Top robust run from [remote_sync/direct_qa_adv_scoreboard.csv](remote_sync/direct_qa_adv_scoreboard.csv):
+- Tag: `advprobe_r2`
+- Model: `Enhanced (FP16)`
+- `robust_selection_score`: `0.7175`
+- `selection_score`: `0.75`
 
-Our approach diverges from traditional fine-tuning, which often leads to catastrophic forgetting, by combining three advanced techniques:
+All planned Hugging Face model pushes are complete and verified.
 
-1. **Dataset Optimization (Negative Preference)**
-   We utilized the `muse-bench/MUSE` dataset to construct highly specialized `forget` and `retain` corpora. This ensures precise targeting of the domain to be unlearned without bleeding into general knowledge.
+## Model Registry (Published)
 
-2. **Gradient Ascent Unlearning**
-   Instead of training the model *on* the data, we train it *away* from the data. By applying Gradient Ascent on the `forget` set, we iteratively push the model's loss higher for the targeted domain, breaking the specific contextual associations within the neural weights.
+### Earlier enhanced checkpoints
+- https://huggingface.co/nightbloodredux/enhanced-unlearned
+- https://huggingface.co/nightbloodredux/enhanced-unlearned-rw08b020
+- https://huggingface.co/nightbloodredux/enhanced-unlearned-rw12b015
 
-3. **Task Arithmetic (Weight Subtraction)**
-   To finalize the unlearning process, we calculate a **Task Vector** (the difference between the pre-trained weights and the gradient-ascent weights) and subtract this vector from the base model. This surgical operation effectively conceptually "erases" the target knowledge.
+### Best-vs-base export bundle (FP16/INT8/INT4)
+- https://huggingface.co/nightbloodredux/inlp-best-advprobe-r2-fp16
+- https://huggingface.co/nightbloodredux/inlp-best-advprobe-r2-int8
+- https://huggingface.co/nightbloodredux/inlp-best-advprobe-r2-int4
+- https://huggingface.co/nightbloodredux/inlp-base-gemma3-1b-fp16
+- https://huggingface.co/nightbloodredux/inlp-base-gemma3-1b-int8
+- https://huggingface.co/nightbloodredux/inlp-base-gemma3-1b-int4
 
-4. **4-Bit Quantization**
-   To make this research accessible and runnable on standard hardware (like free Kaggle instances), the pipeline heavily leverages **Unsloth** and **BitsAndBytes** for 4-bit NormalFloat (NF4) quantization. This reduces the VRAM footprint from ~16GB to under ~2GB.
+See [documentation/model_registry.md](documentation/model_registry.md) for a per-variant table and verification method.
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```text
-├── INLP-Project/
-│   ├── docs/                   # GitHub Pages & Interactive WebLLM UI
-│   │   ├── index.html
-│   │   ├── style.css
-│   │   └── script.js
-│   │   └── logo.png
-│   ├── scripts/                # Python pipeline for the Unlearning experiments
-│   │   ├── run_muse_ada.py     # Main unlearning & evaluation entry point
-│   │   ├── run_muse.slurm      # SLURM submission script for IIIT Ada Cluster
-│   │   ├── 01_load_dataset_model.py
-│   │   ├── 02_task_arithmetic_unlearning.py
-│   │   ├── 03_gradient_ascent_unlearning.py
-│   │   └── helpers/
-│   │       └── pdf_processor.py
-│   ├── kaggle/                 # Jupyter Notebooks for Kaggle environments
-│   │   └── MUSE_Bench_Gemma3_1B.ipynb
-│   └── README.md
+.
+├── docs/                        # GitHub Pages / interactive frontend assets
+├── documentation/               # Guides, handover notes, reports
+├── kaggle/                      # Notebook workflows
+├── model_upload_staging/        # Local model export/upload staging (gitignored)
+├── muse_bench/                  # Benchmark framework
+├── remote_sync/                 # Remote-run scripts, logs, summaries, scoreboards
+└── scripts/                     # Modular baseline unlearning pipeline
 ```
 
-## 🌐 Interactive Website (WebLLM)
+## Quick Start
 
-A major component of this project is the **Interactive Web Interface**. Rather than requiring users to clone the repository and run PyTorch scripts, we have deployed a front-end that leverages [WebLLM](https://webllm.mlc.ai/) and WebGPU to run the quantized Gemma model **directly in the browser client's cache**.
-
-### Features:
-- **No Backend Required:** The 1.5GB model weights are downloaded directly into the browser cache.
-- **Model Selector:** Dynamically switch between the `Base Model`, the `Unlearned Model`, and the `FP16 Variant`.
-- **Privacy First:** Since inference runs locally on the user's GPU via WebGPU, data never leaves the browser.
-
-To run the website locally:
+### 1) Local website
 ```bash
-# From the root directory
 python3 -m http.server 8080 --directory docs
-# Open http://localhost:8080 in your browser
+```
+Then open `http://localhost:8080`.
+
+### 2) Baseline modular pipeline
+```bash
+python scripts/01_load_dataset_model.py
+python scripts/02_task_arithmetic_unlearning.py
+python scripts/03_gradient_ascent_unlearning.py
+python scripts/04_quantize_models.py
+python scripts/05_evaluation.py
 ```
 
-## 📈 Current Progress
+### 3) Remote enhanced sweep/eval workflow
+Use [remote_sync/run_enhanced.py](remote_sync/run_enhanced.py), [remote_sync/direct_qa_eval.py](remote_sync/direct_qa_eval.py), and [remote_sync/run_sweep_experiments.sh](remote_sync/run_sweep_experiments.sh).
 
-- **MUSE Dataset**: Found and loaded in the MUSE Books dataset.
-- **Task Vector Unlearning**: Implemented unlearning via task vector arithmetic.
-- **Initial Quantization and Evaluation**: Performed exploratory quantization (4-bit) and evaluation tests.
+## Documentation Index
 
-## 💻 Running the Code (Kaggle/Colab)
+- Execution guide: [documentation/execution_guide.md](documentation/execution_guide.md)
+- Result summary (April 9, 2026): [documentation/experiment_results_2026-04-09.md](documentation/experiment_results_2026-04-09.md)
+- Model registry and verification: [documentation/model_registry.md](documentation/model_registry.md)
+- Upload/sync handover log: [documentation/handover_upload_and_sync_2026-04-09.md](documentation/handover_upload_and_sync_2026-04-09.md)
 
-For detailed instructions on how to set up your environment, authenticate with Hugging Face, and execute the INLP pipeline, please refer to our comprehensive **[Execution Guide](documentation/execution_guide.md)**.
+## Security Note
 
-## 👥 Meet the Team
-* **Vijay** - Researcher
-* **Anurag** - Researcher & Genius
-* **Aryanil** - Researcher
-* **Harsh** - Researcher
- 
-*Powered by PyTorch, Hugging Face, and WebLLM.*
+Credentials must be provided via environment variables (for example `HF_TOKEN`, `WANDB_API_KEY`) or secret managers. Do not hardcode tokens in notebooks/scripts.
+
+## Team
+
+- Vijay
+- Anurag
+- Aryanil
+- Harsh
+
+Powered by PyTorch, Hugging Face, and WebLLM.

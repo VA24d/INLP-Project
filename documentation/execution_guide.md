@@ -15,7 +15,7 @@ The Python unlearning pipeline is designed to be highly modular and is verified 
    ```bash
    huggingface-cli login
    ```
-   *Note: In Kaggle or Colab, you can pass your token securely using Kaggle Secrets or Colab Userdata.*
+   *Note: In Kaggle or Colab, pass tokens through secret stores or environment variables. Do not hardcode tokens in scripts or notebooks.*
 
 ## Executing the Pipeline
 
@@ -65,3 +65,32 @@ python scripts/05_evaluation.py
 ## Hardware and Memory
 - **With 4-bit Quantization (Recommended):** The VRAM footprint is reduced to under ~2GB, enabling execution on free-tier Kaggle T4 GPUs.
 - **Without Quantization (Mac CPU/MPS):** Expect memory requirements to sit around 4GB-6GB of Unified Memory during inference and unlearning.
+
+## Extended Remote Workflow (Enhanced + Adversarial)
+
+For the larger remote sweep/evaluator workflow, use assets under [remote_sync](../remote_sync):
+- [remote_sync/run_enhanced.py](../remote_sync/run_enhanced.py)
+- [remote_sync/direct_qa_eval.py](../remote_sync/direct_qa_eval.py)
+- [remote_sync/run_sweep_experiments.sh](../remote_sync/run_sweep_experiments.sh)
+
+Typical remote sequence:
+1. Train/retrain enhanced checkpoint with selected hyperparameters.
+2. Evaluate using strict QA plus adversarial probing.
+3. Compare runs via [remote_sync/direct_qa_adv_scoreboard.csv](../remote_sync/direct_qa_adv_scoreboard.csv).
+4. Export final best/base variants in FP16, INT8, INT4.
+
+## Publishing to Hugging Face
+
+Recommended command for large checkpoints:
+
+```bash
+export HF_TOKEN="<your_hf_token>"
+
+hf upload-large-folder nightbloodredux/inlp-best-advprobe-r2-fp16 model_upload_staging/model_export_bundle/best_fp16 --repo-type model --token "$HF_TOKEN" --num-workers 8
+```
+
+Repeat for each variant folder and repo mapping listed in [model_registry.md](model_registry.md).
+
+## Post-Upload Verification
+
+Use [model_registry.md](model_registry.md) for a one-shot verification script that checks file presence per repository.

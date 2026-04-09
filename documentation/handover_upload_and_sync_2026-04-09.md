@@ -52,8 +52,18 @@ Best model by robust score:
 - robust_selection_score: 0.7175
 - source: remote_sync/direct_qa_adv_scoreboard.csv
 
-## 3) What Is Still Pending
-Upload of the new 6 export variants to Hugging Face repos is still pending.
+## 3) Completion Status
+Upload of the 6 export variants to Hugging Face repos is complete.
+
+Verification status:
+- Verified all 9 repos (3 earlier enhanced checkpoints + 6 best/base bundle repos).
+- Verified required files present in each repo:
+  - model.safetensors
+  - config.json
+  - generation_config.json
+  - tokenizer.json
+  - tokenizer_config.json
+  - chat_template.jinja
 
 ## 4) Recommended Repo Mapping
 Use one repo per variant for clarity:
@@ -68,28 +78,11 @@ Use one repo per variant for clarity:
 ## 5) Upload Commands (Resumable Path)
 Run from repository root:
 
-1) Extract Hugging Face token from notebook into /tmp/hf_token.txt
+1) Provide token via environment (recommended)
 
-python - <<'PY'
-import json
-from pathlib import Path
-nb = json.loads(Path('kaggle/unlearning_pipeline_updated.ipynb').read_text())
-token = None
-for cell in nb.get('cells', []):
-    src = ''.join(cell.get('source', []))
-    marker = 'HF_TOKEN    = "'
-    if marker in src:
-        token = src.split(marker, 1)[1].split('"', 1)[0].strip()
-        break
-if not token:
-    raise SystemExit('HF token not found')
-Path('/tmp/hf_token.txt').write_text(token)
-print('TOKEN_READY')
-PY
+export HF_TOKEN="<your_hf_token>"
 
 2) Upload each folder (recommended: hf upload-large-folder)
-
-HF_TOKEN="$(cat /tmp/hf_token.txt)"
 
 hf upload-large-folder nightbloodredux/inlp-best-advprobe-r2-fp16 model_upload_staging/model_export_bundle/best_fp16 --repo-type model --token "$HF_TOKEN" --num-workers 8
 hf upload-large-folder nightbloodredux/inlp-best-advprobe-r2-int8 model_upload_staging/model_export_bundle/best_int8 --repo-type model --token "$HF_TOKEN" --num-workers 8
@@ -124,4 +117,8 @@ Avoid unsupported flags:
 - --append-verify
 
 ## 8) Suggested Immediate Next Action
-Start HF uploads for the 6 variant repos in section 5, then record final repo URLs and file presence in this document.
+No blocking upload actions remain in this workstream.
+
+Recommended follow-up:
+- Keep [documentation/model_registry.md](model_registry.md) as the source of truth for published model links.
+- Re-run verification when publishing new checkpoints.
