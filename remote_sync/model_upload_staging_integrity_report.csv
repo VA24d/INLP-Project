@@ -1,0 +1,15 @@
+model_dir,size_bytes,tensor_count,status,missing_files,error
+model_upload_staging/_probe_best_int4,996870192,886,ok,,
+model_upload_staging/_probe_best_int8,1303924478,704,ok,,
+model_upload_staging/base_gemma3_1b_it_fp16,1999810864,340,ok,,
+model_upload_staging/base_gemma3_1b_it_int4,996870192,886,ok,,
+model_upload_staging/base_gemma3_1b_it_int8,1303924478,704,ok,,
+model_upload_staging/enhanced_unlearned,1999810864,340,ok,,
+model_upload_staging/enhanced_unlearned_rw08b020,1999810864,340,ok,,
+model_upload_staging/enhanced_unlearned_rw12b015,1999810864,340,ok,,
+model_upload_staging/model_export_bundle/base_fp16,1999810864,340,ok,,
+model_upload_staging/model_export_bundle/base_int4,996870192,886,ok,,
+model_upload_staging/model_export_bundle/base_int8,1303924478,704,ok,,
+model_upload_staging/model_export_bundle/best_fp16,1919221760,,corrupt_or_unreadable,tokenizer.json;tokenizer_config.json,"Error while deserializing header: incomplete metadata, file not fully covered"
+model_upload_staging/model_export_bundle/best_int4,996870192,886,ok,,
+model_upload_staging/model_export_bundle/best_int8,1303924478,704,ok,,

@@ -1,0 +1,85 @@
+/usr/local/lib/python3.9/site-packages/transformers/utils/hub.py:105: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1775768066.206254  236049 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1775768066.219590  236049 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1775768066.437907  236049 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768066.437962  236049 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768066.437966  236049 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768066.437970  236049 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+Working directory: /tmp | ON_KAGGLE=False
+HF_TOKEN not set; skipping HuggingFace login.
+WANDB_API_KEY not set; skipping W&B login and init.
+============================================================
+Pre-flight Tests — Enhanced Unlearning Notebook
+============================================================
+  SWA: applying average of 1 snapshots...
+  [PASS] ManualSWA_init_update_apply
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-05, 1.00e-04]
+  [PASS] partial_unfreezing_grad_flags
+  Unfrozen layers: [0, 1, 2, 3] + lm_head | 9 param tensors | LR range [6.14e-05, 1.00e-04]
+  [PASS] no_duplicate_params_tied_weights
+  [PASS] get_batch_logps_shape
+  [PASS] npo_loss_finite
+  [PASS] graddiff_retain_loss_finite
+Enhanced Unlearning | phases=1 | epochs/phase=1 | total_epochs=1
+Model layers=4 | SWA starts at step 0/2
+
+── Phase 1/1: unfreezing 2 top layers (2-3) ──
+  Unfrozen layers: [2, 3] + lm_head | 5 param tensors | LR range [8.50e-06, 1.00e-05]
+  p1 e0 s0 | npo=13.5724 retain=6.1516 total=19.7241
+  Phase 1 Epoch 0 done | avg npo=14.5574 retain=5.9985
+  SWA: applying average of 1 snapshots...
+  [PASS] enhanced_unlearning_smoke
+  [PASS] cpu_noop_scaler
+  [PASS] amp_device_string
+Map:   0%|          | 0/2 [00:00<?, ? examples/s]Map: 100%|██████████| 2/2 [00:00<00:00, 424.37 examples/s]
+Map:   0%|          | 0/2 [00:00<?, ? examples/s]Map: 100%|██████████| 2/2 [00:00<00:00, 448.21 examples/s]
+  Chunked → 2 blocks of 16 tokens.
+  [PASS] tokenize_dataset_basic
+============================================================
+Results: 10 passed, 0 failed
+All tests passed — safe to run on Kaggle.
+============================================================
+Experiment=rw12b015 | ckpt=/tmp/models_enhanced/enhanced_unlearned_rw12b015 | retrain=True | requantize=False | skip_full_eval=True
+HP: phases=1, epochs/phase=1, start_layers=6, unfreeze/phase=4, base_lr=1e-05, lr_decay=0.85, grad_accum=4, beta=0.15, retain_weight=1.2, use_swa=True, swa_start_frac=0.5, swa_freq=5, max_steps=20, train_forget_qa_max=32, train_retain_qa_max=32, batch_size=1, max_seq_len=96, ref_on_cpu=True, hard_augment=True, hard_variants=2, use_external_qa=False, external_qa_max=300, external_qa_path=/home/bhaskar/inlp/data/harrypotterqa, refusal_calibration=True, refusal_hard_augment=True
+=== Loading resources ===
+Loading MUSE-Books dataset...
+Loading Raw Text (subset='raw')...
+Available 'raw' splits: dict_keys(['retain2', 'forget', 'retain1', 'holdout'])
+Loading Knowledge Memorization (subset='knowmem')...
+Available 'knowmem' splits: dict_keys(['retain_qa_icl', 'retain_qa', 'forget_qa', 'forget_qa_icl'])
+Loaded: 4 forget / 25 retain train samples
+Loaded: 100 forget QA / 100 retain QA pairs
+QA:  62 forget / 56 retain
+Hard QA variants: forget=124 retain=112 (enabled=True, variants=2)
+Manual QA seeds included: 12 forget + 12 retain
+Train signal expanded: forget 4->36 | retain 25->57
+Raw: 4 forget / 25 retain
+
+=== Enhanced Unlearning (NPO + GradDiff + GradualUnfreeze + LayerwiseLR + SWA) ===
+Loading Base Model nightbloodredux/inlp-base-gemma3-1b-fp16...
+Loading reference model (device_map=cpu, dtype=torch.float16)...
+  Chunked → 11 blocks of 96 tokens.
+  Chunked → 31 blocks of 96 tokens.
+Enhanced Unlearning | phases=1 | epochs/phase=1 | total_epochs=1
+Model layers=26 | SWA starts at step 5/11
+
+── Phase 1/1: unfreezing 6 top layers (20-25) ──
+  Unfrozen layers: [20, 21, 22, 23, 24, 25] + lm_head | 79 param tensors | LR range [4.44e-06, 1.00e-05]
+  p1 e0 s0 | npo=9.3947 retain=4.5669 total=14.8749
+  Phase 1 Epoch 0 done | avg npo=3.7503 retain=4.4017
+  SWA: no snapshots collected (training too short). Returning final model.
+Running refusal calibration | rows=40 | forget=24 | retain=16 | epochs=1
+Fine-tuning 40 samples | epochs=1 | disc_lr=True
+Map:   0%|          | 0/40 [00:00<?, ? examples/s]Map: 100%|██████████| 40/40 [00:00<00:00, 211.43 examples/s]Map: 100%|██████████| 40/40 [00:00<00:00, 198.81 examples/s]
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+  Discriminative LR: embed=1.29e-06 ... layer[-1]=2.00e-05 (27 groups)
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:14<00:14, 14.66s/it]100%|██████████| 2/2 [00:23<00:00, 11.19s/it]                                             100%|██████████| 2/2 [00:23<00:00, 11.19s/it]100%|██████████| 2/2 [00:23<00:00, 11.73s/it]
+{'train_runtime': 23.456, 'train_samples_per_second': 1.705, 'train_steps_per_second': 0.085, 'train_loss': 4.964051246643066, 'epoch': 0.8}
+Saving enhanced model → /tmp/models_enhanced/enhanced_unlearned_rw12b015...
+SKIP_FULL_EVAL=1 -> saved quick marker CSV -> enhanced_unlearning_results_rw12b015.csv

@@ -22,6 +22,8 @@ Core methods used in this workstream:
 
 Latest experiment batch includes `advprobe_r1/r2/r3`, `fixbal_q1/q2`, and `qaextquick`.
 
+Additional `rw12b015_tight_gpufix` analysis (2026-04-10) adds direct-question probing on top of strict/adversarial metrics.
+
 Top robust run from [remote_sync/direct_qa_adv_scoreboard.csv](remote_sync/direct_qa_adv_scoreboard.csv):
 - Tag: `advprobe_r2`
 - Model: `Enhanced (FP16)`
@@ -57,6 +59,7 @@ See [documentation/model_registry.md](documentation/model_registry.md) for a per
 ├── model_upload_staging/        # Local model export/upload staging (gitignored)
 ├── muse_bench/                  # Benchmark framework
 ├── remote_sync/                 # Remote-run scripts, logs, summaries, scoreboards
+│   └── probes/                  # Direct-question qualitative probe scripts/results
 └── scripts/                     # Modular baseline unlearning pipeline
 ```
 
@@ -84,8 +87,10 @@ Use [remote_sync/run_enhanced.py](remote_sync/run_enhanced.py), [remote_sync/dir
 
 - Execution guide: [documentation/execution_guide.md](documentation/execution_guide.md)
 - Result summary (April 9, 2026): [documentation/experiment_results_2026-04-09.md](documentation/experiment_results_2026-04-09.md)
+- Result summary (April 10, 2026): [documentation/experiment_results_2026-04-10.md](documentation/experiment_results_2026-04-10.md)
 - Model registry and verification: [documentation/model_registry.md](documentation/model_registry.md)
 - Upload/sync handover log: [documentation/handover_upload_and_sync_2026-04-09.md](documentation/handover_upload_and_sync_2026-04-09.md)
+- Probe folder guide: [remote_sync/probes/README.md](remote_sync/probes/README.md)
 
 ## Security Note
 

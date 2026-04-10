@@ -1,0 +1,285 @@
+{
+  "best_repo": "nightbloodredux/enhanced-unlearned-rw12b015",
+  "best_metrics": {
+    "status": "ok",
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 1.0,
+    "forget_hits": 1,
+    "forget_total": 12,
+    "retain_hits": 12,
+    "retain_total": 12,
+    "score_(1-forget)+retain": 1.9166666666666665
+  },
+  "repo_results": {
+    "nightbloodredux/enhanced-unlearned": {
+      "status": "ok",
+      "forget_hit_rate": 0.16666666666666666,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 2,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333335
+    },
+    "nightbloodredux/enhanced-unlearned-rw08b020": {
+      "status": "ok",
+      "forget_hit_rate": 0.16666666666666666,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 2,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333335
+    },
+    "nightbloodredux/enhanced-unlearned-rw12b015": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665
+    },
+    "nightbloodredux/inlp-base-gemma3-1b-fp16": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665
+    },
+    "nightbloodredux/inlp-base-gemma3-1b-int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.0,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 0,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665
+    },
+    "nightbloodredux/inlp-base-gemma3-1b-int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665
+    },
+    "nightbloodredux/inlp-best-advprobe-r2-fp16": {
+      "status": "failed",
+      "error": "Error while deserializing header: MetadataIncompleteBuffer",
+      "forget_hit_rate": NaN,
+      "retain_hit_rate": NaN,
+      "score_(1-forget)+retain": NaN
+    },
+    "nightbloodredux/inlp-best-advprobe-r2-int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333333
+    },
+    "nightbloodredux/inlp-best-advprobe-r2-int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665
+    }
+  },
+  "folder_results": {
+    "_probe_best_int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333333,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int4"
+    },
+    "_probe_best_int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int8"
+    },
+    "base_gemma3_1b_it_fp16": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-fp16"
+    },
+    "base_gemma3_1b_it_int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.0,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 0,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-int4"
+    },
+    "base_gemma3_1b_it_int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-int8"
+    },
+    "enhanced_best_advprobe_r2_fp16": {
+      "status": "failed",
+      "error": "Error while deserializing header: MetadataIncompleteBuffer",
+      "forget_hit_rate": NaN,
+      "retain_hit_rate": NaN,
+      "score_(1-forget)+retain": NaN,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-fp16"
+    },
+    "enhanced_best_advprobe_r2_int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333333,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int4"
+    },
+    "enhanced_best_advprobe_r2_int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int8"
+    },
+    "enhanced_unlearned": {
+      "status": "ok",
+      "forget_hit_rate": 0.16666666666666666,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 2,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333335,
+      "repo": "nightbloodredux/enhanced-unlearned"
+    },
+    "enhanced_unlearned_rw08b020": {
+      "status": "ok",
+      "forget_hit_rate": 0.16666666666666666,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 2,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333335,
+      "repo": "nightbloodredux/enhanced-unlearned-rw08b020"
+    },
+    "enhanced_unlearned_rw12b015": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/enhanced-unlearned-rw12b015"
+    },
+    "model_export_bundle/base_fp16": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-fp16"
+    },
+    "model_export_bundle/base_int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.0,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 0,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-int4"
+    },
+    "model_export_bundle/base_int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-base-gemma3-1b-int8"
+    },
+    "model_export_bundle/best_fp16": {
+      "status": "failed",
+      "error": "Error while deserializing header: MetadataIncompleteBuffer",
+      "forget_hit_rate": NaN,
+      "retain_hit_rate": NaN,
+      "score_(1-forget)+retain": NaN,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-fp16"
+    },
+    "model_export_bundle/best_int4": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 0.9166666666666666,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 11,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.8333333333333333,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int4"
+    },
+    "model_export_bundle/best_int8": {
+      "status": "ok",
+      "forget_hit_rate": 0.08333333333333333,
+      "retain_hit_rate": 1.0,
+      "forget_hits": 1,
+      "forget_total": 12,
+      "retain_hits": 12,
+      "retain_total": 12,
+      "score_(1-forget)+retain": 1.9166666666666665,
+      "repo": "nightbloodredux/inlp-best-advprobe-r2-int8"
+    }
+  }
+}

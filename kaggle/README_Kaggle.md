@@ -26,3 +26,13 @@ Kaggle is an excellent environment for running this experiment! It provides free
    - The notebook is pre-configured to install all the required libraries (`bitsandbytes`, `transformers`, `datasets`, etc.).
    - It will automatically read the `HF_TOKEN` from Kaggle's secret manager and log you in.
    - Run the cells sequentially to initialize the pipeline, perform the unlearning operations, and quantize the model.
+
+## Hard-Question Stability Notebook
+
+For robustness under prompt attacks (translated wrappers, JSON-format constraints, Base64 cipher prompts, persona framing, indirect phrasing, and gradient suffix noise), use:
+
+- `hard_question_stability_unlearning.ipynb`
+
+This notebook runs the patched robust profile in `remote_sync/run_enhanced.py` with low-VRAM-safe defaults and then runs `remote_sync/direct_qa_eval.py` to produce a summary JSON.
+
+The hard-question checks are generated from your core QA pool at runtime (template perturbations), rather than reusing a fixed direct adversarial probe list.

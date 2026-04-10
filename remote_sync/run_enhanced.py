@@ -1,12 +1,18 @@
 import os
-os.environ['HF_HOME']                = '/tmp/hf_cache'
-os.environ['TRANSFORMERS_CACHE']     = '/tmp/hf_cache'
-os.environ['HF_DATASETS_CACHE']      = '/tmp/hf_cache/datasets'
-os.environ['WANDB_DIR']              = '/tmp/wandb'
-os.environ['WANDB_CACHE_DIR']        = '/tmp/wandb_cache'
-os.makedirs('/tmp/hf_cache', exist_ok=True)
-os.makedirs('/tmp/wandb', exist_ok=True)
-os.makedirs('/tmp/wandb_cache', exist_ok=True)
+_CACHE_USER = os.getenv("USER", "user")
+# Respect caller-provided cache locations (e.g. Slurm env); use per-user defaults otherwise.
+os.environ.setdefault('HF_HOME', f'/tmp/hf_cache_{_CACHE_USER}')
+os.environ.setdefault('TRANSFORMERS_CACHE', os.environ['HF_HOME'])
+os.environ.setdefault('HF_DATASETS_CACHE', os.path.join(os.environ['HF_HOME'], 'datasets'))
+os.environ.setdefault('WANDB_DIR', f'/tmp/wandb_{_CACHE_USER}')
+os.environ.setdefault('WANDB_CACHE_DIR', f'/tmp/wandb_cache_{_CACHE_USER}')
+# Prevent silent Torch compile warmup/stalls unless a caller explicitly overrides it.
+os.environ.setdefault('TORCHDYNAMO_DISABLE', '1')
+os.makedirs(os.environ['HF_HOME'], exist_ok=True)
+os.makedirs(os.environ['TRANSFORMERS_CACHE'], exist_ok=True)
+os.makedirs(os.environ['HF_DATASETS_CACHE'], exist_ok=True)
+os.makedirs(os.environ['WANDB_DIR'], exist_ok=True)
+os.makedirs(os.environ['WANDB_CACHE_DIR'], exist_ok=True)
 
 
 # ===== CELL 1 =====
@@ -82,12 +88,23 @@ else:
 # ===== CELL 3 =====
 
 import os, gc, math, warnings, traceback
+import base64
+import re
 import torch
 import torch.nn.functional as F
 
-MODEL_NAME  = "google/gemma-3-1b-it"
+try:
+    torch._dynamo.disable()
+except Exception:
+    pass
+
+DEFAULT_MODEL_NAME = "google/gemma-3-1b-it"
+MODEL_NAME  = (os.getenv("MODEL_NAME", DEFAULT_MODEL_NAME) or DEFAULT_MODEL_NAME).strip()
 MODELS_DIR  = "models_enhanced"
-MAX_SEQ_LEN = 256
+try:
+    MAX_SEQ_LEN = int(os.getenv("ENH_MAX_SEQ_LEN", "256"))
+except ValueError:
+    MAX_SEQ_LEN = 256
 
 FLAGS = {
     "RETRAIN_ENHANCED": False,  # Eval-only rerun from existing checkpoint
@@ -107,7 +124,7 @@ def clean_memory():
 
 # ===== CELL 4 =====
 
-def load_base_model(gradient_checkpointing: bool = False):
+def load_base_model(gradient_checkpointing: bool = False, use_data_parallel: bool = False):
     """Load Gemma-3-1B in FP16 across available GPUs.
     gradient_checkpointing=True halves activation memory at ~33% compute cost.
     """
@@ -116,10 +133,16 @@ def load_base_model(gradient_checkpointing: bool = False):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    if use_data_parallel and torch.cuda.is_available():
+        # DataParallel requires a single-device root model on cuda:0.
+        selected_device_map = {"": 0}
+    else:
+        selected_device_map = "auto"
+
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         torch_dtype=torch.float16,
-        device_map="auto",
+        device_map=selected_device_map,
         low_cpu_mem_usage=True,
         attn_implementation="eager",  # Gemma3 recommended; sdpa triggers warnings
     )
@@ -271,7 +294,20 @@ def npo_unlearning(model, ref_model, forget_dataloader, epochs=1, lr=1e-5, beta=
 from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from torch.utils.data import DataLoader
 
-MAX_SEQ_LEN = 256  # 256 tokens: 4× less activation memory vs 1024
+# Keep using ENH_MAX_SEQ_LEN if set earlier; this cell should not hard-reset it.
+MAX_SEQ_LEN = int(os.getenv("ENH_MAX_SEQ_LEN", str(MAX_SEQ_LEN)))
+
+
+def _map_num_proc(default=2):
+    try:
+        value = int(os.getenv("ENH_MAP_NUM_PROC", str(default)))
+    except Exception:
+        value = default
+    # datasets.map(num_proc=1) still forks a worker process.
+    # Use None to force in-process mapping on low-memory machines.
+    if value <= 1:
+        return None
+    return value
 
 # ── Layer-wise LR helper (shared by fine-tune AND unlearning) ────────────────
 def get_layerwise_param_groups(model, base_lr: float, decay: float = 0.85):
@@ -338,9 +374,16 @@ class DiscriminativeTrainer(Trainer):
 # ── Data helpers ─────────────────────────────────────────────────────────────
 def tokenize_dataset(dataset, tokenizer, max_length=MAX_SEQ_LEN):
     text_col = 'text' if 'text' in dataset.column_names else dataset.column_names[0]
+    num_proc = _map_num_proc(default=2)
+    try:
+        max_mult = int(os.getenv("ENH_TOKENIZE_INPUT_MAX_MULT", "2"))
+    except Exception:
+        max_mult = 2
+    max_mult = max(1, max_mult)
+    tokenize_max_len = max_length * max_mult
     tokenized = dataset.map(
-        lambda x: tokenizer(x[text_col]),
-        batched=True, remove_columns=dataset.column_names, num_proc=2,
+        lambda x: tokenizer(x[text_col], truncation=True, max_length=tokenize_max_len),
+        batched=True, remove_columns=dataset.column_names, num_proc=num_proc,
     )
     def group_texts(examples):
         concat = {k: sum(examples[k], []) for k in examples.keys()}
@@ -349,7 +392,7 @@ def tokenize_dataset(dataset, tokenizer, max_length=MAX_SEQ_LEN):
                   for k, t in concat.items()}
         result["labels"] = result["input_ids"].copy()
         return result
-    lm_dataset = tokenized.map(group_texts, batched=True, num_proc=2)
+    lm_dataset = tokenized.map(group_texts, batched=True, num_proc=num_proc)
     lm_dataset.set_format("torch")
     print(f"  Chunked → {len(lm_dataset)} blocks of {max_length} tokens.")
     return lm_dataset
@@ -357,19 +400,30 @@ def tokenize_dataset(dataset, tokenizer, max_length=MAX_SEQ_LEN):
 def create_dataloader(dataset, tokenizer, batch_size=2, max_length=MAX_SEQ_LEN):
     tokenized = tokenize_dataset(dataset, tokenizer, max_length)
     collator  = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    workers = int(os.getenv("ENH_DATALOADER_WORKERS", "0"))
+    workers = max(0, workers)
     return DataLoader(tokenized, batch_size=batch_size, shuffle=True,
-                      collate_fn=collator, pin_memory=True,
-                      num_workers=2, drop_last=True)
+                      collate_fn=collator, pin_memory=torch.cuda.is_available(),
+                      num_workers=workers, drop_last=True)
 
 def fine_tune_model(model, tokenizer, dataset, output_dir, epochs=5,
                     is_qa=False, use_discriminative_lr=False, lr_decay=0.85):
     """Fine-tune with optional discriminative (per-layer) learning rates."""
     print(f"Fine-tuning {len(dataset)} samples | epochs={epochs} | disc_lr={use_discriminative_lr}")
+    num_proc = _map_num_proc(default=2)
+    trainer_workers = max(0, int(os.getenv("ENH_TRAINER_DATALOADER_WORKERS", "0")))
+    report_to_env = os.getenv("ENH_REPORT_TO", "none").strip().lower()
+    if report_to_env in {"", "none", "off", "disabled", "false", "0"}:
+        report_to_value = "none"
+    else:
+        report_to_value = [x.strip() for x in report_to_env.split(",") if x.strip()]
+        if not report_to_value:
+            report_to_value = "none"
     if is_qa:
         def tok_qa(examples):
             return tokenizer(examples['text'], truncation=True, max_length=MAX_SEQ_LEN*4)
         tokenized_dataset = dataset.map(tok_qa, batched=True,
-                                        remove_columns=dataset.column_names, num_proc=2)
+                                        remove_columns=dataset.column_names, num_proc=num_proc)
     else:
         tokenized_dataset = tokenize_dataset(dataset, tokenizer)
 
@@ -390,9 +444,9 @@ def fine_tune_model(model, tokenizer, dataset, output_dir, epochs=5,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
         optim="paged_adamw_8bit",
-        dataloader_num_workers=2,
+        dataloader_num_workers=trainer_workers,
         dataloader_pin_memory=True,
-        report_to="wandb",
+        report_to=report_to_value,
         ddp_find_unused_parameters=False,
     )
     collator     = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
@@ -470,6 +524,93 @@ def _normalize_prompt_key(prompt):
     return " ".join(str(prompt or "").strip().lower().split())
 
 
+def _pseudo_spanish_prompt(prompt):
+    text = _clean_qa_text(prompt)
+    lowered = text.lower()
+    starters = {
+        "who ": "quien ",
+        "what ": "cual ",
+        "where ": "donde ",
+        "when ": "cuando ",
+        "which ": "cual ",
+        "how ": "como ",
+        "tell me about ": "cuentame sobre ",
+    }
+    for src, dst in starters.items():
+        if lowered.startswith(src):
+            text = dst + text[len(src):]
+            break
+    return text
+
+
+def _hard_prompt_variants(prompt, split, max_variants=7):
+    prompt = _clean_qa_text(prompt)
+    if not prompt:
+        return []
+
+    encoded = base64.b64encode(prompt.encode("utf-8")).decode("ascii")
+    variants = [
+        prompt,
+        f"Responde en una frase corta: {_pseudo_spanish_prompt(prompt)}",
+        f"Return compact JSON only with key answer. Query: {prompt}",
+        f"Decode this base64-encoded query, then answer briefly: {encoded}",
+        (
+            "Act as a concise encyclopedia editor and provide a factual one-sentence answer: "
+            f"{prompt}"
+        ),
+        (
+            "Answer the same question using indirect wording while preserving factual correctness: "
+            f"{prompt}"
+        ),
+        f"{prompt} ### ### ###",
+    ]
+    if split == "forget":
+        variants.append(f"Provide only the final short answer for this query: {prompt}")
+    else:
+        variants.append(f"Reply with a short, direct phrase only: {prompt}")
+
+    deduped = []
+    seen = set()
+    for item in variants:
+        key = _normalize_prompt_key(item)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped[:max(1, int(max_variants))]
+
+
+def expand_qa_for_hard_prompts(qa_pairs, split="forget", enabled=True, max_variants=7):
+    expanded = []
+    seen = set()
+
+    for qa in qa_pairs:
+        prompt = _clean_qa_text(qa.get("prompt"))
+        answer = _clean_qa_text(qa.get("answer"))
+        if not prompt or not answer:
+            continue
+
+        prompts = [prompt]
+        if enabled:
+            prompts = _hard_prompt_variants(prompt, split=split, max_variants=max_variants)
+
+        for variant_prompt in prompts:
+            key = _normalize_prompt_key(variant_prompt)
+            if key in seen:
+                continue
+            seen.add(key)
+            expanded.append({"prompt": variant_prompt, "answer": answer})
+    return expanded
+
+
+def _refusal_answer_for_prompt(prompt, refusal_text):
+    key = _normalize_prompt_key(prompt)
+    if "json object" in key or "single key" in key:
+        escaped = str(refusal_text).replace('\\', '\\\\').replace('"', '\\"')
+        return f'{{"response": "{escaped}"}}'
+    return refusal_text
+
+
 def _clean_qa_text(value):
     if value is None:
         return ""
@@ -485,6 +626,206 @@ def _clean_qa_text(value):
     text = str(value).strip().replace("\r", " ").replace("\n", " ")
     text = " ".join(text.split())
     return text
+
+
+def _extract_text_from_record(record):
+    if isinstance(record, str):
+        text = _clean_qa_text(record)
+        return text if len(text.split()) >= 8 else None
+
+    if not isinstance(record, dict):
+        return None
+
+    preferred_keys = [
+        "text",
+        "content",
+        "passage",
+        "paragraph",
+        "chapter_text",
+        "context",
+        "body",
+        "summary",
+        "description",
+        "quote",
+    ]
+
+    for key in preferred_keys:
+        val = record.get(key)
+        if isinstance(val, str):
+            text = _clean_qa_text(val)
+            if len(text.split()) >= 8:
+                return text
+
+    # Fallback: choose the longest string field.
+    best = ""
+    for val in record.values():
+        if isinstance(val, str):
+            text = _clean_qa_text(val)
+            if len(text) > len(best):
+                best = text
+    if len(best.split()) >= 8:
+        return best
+    return None
+
+
+def _resolve_external_text_path(base_path, kaggle_dataset_ref=""):
+    path = str(base_path or "").strip()
+    if path and os.path.exists(path):
+        return path
+
+    ref = str(kaggle_dataset_ref or "").strip()
+    if ref:
+        try:
+            import kagglehub  # type: ignore
+
+            downloaded = kagglehub.dataset_download(ref)
+            if downloaded and os.path.exists(downloaded):
+                print(f"Downloaded Kaggle dataset '{ref}' -> {downloaded}")
+                return downloaded
+        except Exception as e:
+            print(f"  [warn] kagglehub dataset download failed for '{ref}': {e}")
+
+    return path
+
+
+def load_external_text_snippets(base_path, max_texts=400):
+    base_path = str(base_path or "").strip()
+    if not base_path:
+        return []
+    if not os.path.exists(base_path):
+        print(f"External text path not found: {base_path}. Skipping external text.")
+        return []
+
+    import json as _json
+    import pandas as _pd
+
+    supported = {".txt", ".json", ".jsonl", ".csv", ".parquet"}
+    files = []
+    if os.path.isfile(base_path):
+        files = [base_path]
+    else:
+        for root, _, names in os.walk(base_path):
+            for name in names:
+                ext = os.path.splitext(name)[1].lower()
+                if ext in supported:
+                    files.append(os.path.join(root, name))
+    files = sorted(files)
+    if not files:
+        print(f"No supported external text files found under: {base_path}")
+        return []
+
+    snippets = []
+    seen = set()
+    limit = max(0, int(max_texts))
+
+    for path in files:
+        if limit and len(snippets) >= limit:
+            break
+
+        ext = os.path.splitext(path)[1].lower()
+        try:
+            records = []
+            if ext == ".txt":
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    text = f.read()
+                records = [chunk for chunk in re.split(r"\n\s*\n+", text) if chunk.strip()]
+            elif ext == ".json":
+                with open(path, "r", encoding="utf-8") as f:
+                    payload = _json.load(f)
+                records = list(_iter_json_records(payload)) if isinstance(payload, dict) else payload
+            elif ext == ".jsonl":
+                with open(path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            records.append(_json.loads(line))
+                        except Exception:
+                            records.append(line)
+            elif ext in {".csv", ".parquet"}:
+                df = _pd.read_csv(path) if ext == ".csv" else _pd.read_parquet(path)
+                records = df.to_dict(orient="records")
+
+            for rec in records:
+                text = _extract_text_from_record(rec)
+                if not text:
+                    continue
+                key = _normalize_prompt_key(text)
+                if key in seen:
+                    continue
+                seen.add(key)
+                snippets.append(text)
+                if limit and len(snippets) >= limit:
+                    break
+        except Exception as e:
+            print(f"  [warn] failed parsing external text file {path}: {e}")
+
+    print(f"Loaded external text snippets: {len(snippets)}")
+    return snippets
+
+
+def _pick_cloze_answer(sentence):
+    # Prefer proper nouns first (useful for HP entities), then informative words.
+    candidates = re.findall(r"[A-Za-z][A-Za-z\-']+", sentence)
+    if not candidates:
+        return ""
+
+    stop = {
+        "the", "and", "for", "with", "from", "into", "that", "this",
+        "was", "were", "are", "have", "has", "had", "will", "would",
+        "could", "should", "about", "there", "their", "they", "them",
+    }
+
+    for tok in candidates:
+        if tok[0].isupper() and len(tok) >= 3:
+            low = tok.lower()
+            if low not in stop:
+                return tok
+
+    informative = [t for t in candidates if len(t) >= 5 and t.lower() not in stop]
+    if informative:
+        informative.sort(key=len, reverse=True)
+        return informative[0]
+    return ""
+
+
+def build_cloze_questions_from_texts(text_rows, max_questions=200):
+    rows = []
+    seen = set()
+    max_questions = max(0, int(max_questions))
+    if max_questions == 0:
+        return rows
+
+    for text in text_rows:
+        if len(rows) >= max_questions:
+            break
+        for sentence in re.split(r"(?<=[.!?])\s+", str(text)):
+            s = _clean_qa_text(sentence)
+            words = s.split()
+            if len(words) < 8 or len(words) > 40:
+                continue
+
+            answer = _pick_cloze_answer(s)
+            if not answer:
+                continue
+
+            blanked = re.sub(rf"\b{re.escape(answer)}\b", "____", s, count=1)
+            if blanked == s:
+                continue
+
+            prompt = f"Fill in the blank with one word from the source text: {blanked}"
+            key = _normalize_prompt_key(prompt)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append({"prompt": prompt, "answer": answer})
+
+            if len(rows) >= max_questions:
+                break
+
+    print(f"Generated cloze QA from external text: {len(rows)}")
+    return rows
 
 
 def _extract_qa_from_record(record):
@@ -613,11 +954,21 @@ def load_external_qa_pairs(base_path, max_questions=300):
     return selected
 
 
-def build_instruction_text_dataset(qa_pairs, max_items=200, answer_override=None):
+def build_instruction_text_dataset(
+    qa_pairs,
+    max_items=200,
+    answer_override=None,
+    answer_builder=None,
+):
     rows = []
     for qa in qa_pairs[:max(0, int(max_items))]:
         prompt = _clean_qa_text(qa.get("prompt"))
-        answer = _clean_qa_text(answer_override if answer_override is not None else qa.get("answer"))
+        if answer_builder is not None:
+            answer = _clean_qa_text(answer_builder(prompt, qa.get("answer")))
+        elif answer_override is not None:
+            answer = _clean_qa_text(answer_override)
+        else:
+            answer = _clean_qa_text(qa.get("answer"))
         if not prompt or not answer:
             continue
         rows.append(f"Question: {prompt}\nAnswer: {answer}")
@@ -630,10 +981,11 @@ def ensure_text_dataset(dataset):
     if "text" in dataset.column_names:
         return dataset
     text_col = dataset.column_names[0]
+    num_proc = _map_num_proc(default=2)
     return dataset.map(
         lambda x: {"text": x[text_col]},
         remove_columns=dataset.column_names,
-        num_proc=2,
+        num_proc=num_proc,
     )
 
 
@@ -664,14 +1016,29 @@ def apply_refusal_calibration(
     epochs=1,
     max_forget=256,
     max_retain=128,
+    use_hard_augment=True,
+    hard_variants=7,
 ):
-    forget_ds = build_instruction_text_dataset(
+    forget_calibration_questions = expand_qa_for_hard_prompts(
         forget_questions,
+        split="forget",
+        enabled=use_hard_augment,
+        max_variants=hard_variants,
+    )
+    retain_calibration_questions = expand_qa_for_hard_prompts(
+        retain_questions,
+        split="retain",
+        enabled=use_hard_augment,
+        max_variants=max(2, int(hard_variants)),
+    )
+
+    forget_ds = build_instruction_text_dataset(
+        forget_calibration_questions,
         max_items=max_forget,
-        answer_override=refusal_text,
+        answer_builder=lambda prompt, _: _refusal_answer_for_prompt(prompt, refusal_text),
     )
     retain_ds = build_instruction_text_dataset(
-        retain_questions,
+        retain_calibration_questions,
         max_items=max_retain,
         answer_override=None,
     )
@@ -1321,6 +1688,28 @@ def _get_unfrozen_param_groups(model, base_lr: float, decay: float,
     return groups
 
 
+def _masked_mean_pool(hidden_states, attention_mask):
+    """Mean-pool last hidden states with attention-mask support."""
+    mask = attention_mask.unsqueeze(-1).to(hidden_states.dtype)
+    denom = mask.sum(dim=1).clamp_min(1.0)
+    return (hidden_states * mask).sum(dim=1) / denom
+
+
+def _unwrap_model(model):
+    return model.module if hasattr(model, "module") else model
+
+
+def _save_periodic_checkpoint(model, tokenizer, checkpoint_base_dir, global_step):
+    if not checkpoint_base_dir:
+        return
+    os.makedirs(checkpoint_base_dir, exist_ok=True)
+    step_dir = os.path.join(checkpoint_base_dir, f"step_{int(global_step):04d}")
+    model.save_pretrained(step_dir)
+    if tokenizer is not None:
+        tokenizer.save_pretrained(step_dir)
+    print(f"  Saved intermediate checkpoint -> {step_dir}")
+
+
 def enhanced_unlearning(
     model,
     ref_model,
@@ -1338,6 +1727,18 @@ def enhanced_unlearning(
     max_grad_norm:     float = 1.0,
     # -- NPO --
     beta:              float = 0.1,   # NPO temperature
+    # -- BS-NPO --
+    use_bs_npo:        bool  = False,
+    bs_npo_weight:     float = 0.35,
+    bs_npo_start_step: int   = 0,
+    bs_npo_interval:   int   = 1,
+    # -- CNPO --
+    use_cnpo:          bool  = False,
+    cnpo_weight:       float = 0.25,
+    cnpo_start_step:   int   = 0,
+    cnpo_interval:     int   = 1,
+    cnpo_temp:         float = 6.0,
+    cnpo_retain_pull:  float = 0.6,
     # -- GradDiff --
     retain_weight:     float = 1.0,   # weight on retain CE term
     # -- SWA --
@@ -1345,12 +1746,23 @@ def enhanced_unlearning(
     swa_start_frac:    float = 0.5,   # fraction of total steps after which SWA collects
     swa_freq:          int   = 5,
     max_update_steps   = None,
+    use_data_parallel: bool  = False,
+    checkpoint_every_steps: int = 0,
+    checkpoint_base_dir: str = "",
+    checkpoint_tokenizer=None,
 ):
     """
     Combine NPO + GradDiff + Gradual Unfreezing + Inverted-Triangle LR + SWA
     into a single training loop.
     """
-    num_layers = len(model.model.layers)
+    base_model = _unwrap_model(model)
+    if use_data_parallel and torch.cuda.device_count() > 1:
+        print(f"DataParallel enabled across {torch.cuda.device_count()} GPUs.")
+        train_model = torch.nn.DataParallel(base_model)
+    else:
+        train_model = base_model
+
+    num_layers = len(base_model.model.layers)
     total_epochs = total_phases * epochs_per_phase
     steps_per_epoch = len(forget_dataloader)
     total_steps = total_epochs * steps_per_epoch
@@ -1361,8 +1773,20 @@ def enhanced_unlearning(
     print(f"Enhanced Unlearning | phases={total_phases} | "
           f"epochs/phase={epochs_per_phase} | total_epochs={total_epochs}")
     print(f"Model layers={num_layers} | SWA starts at step {swa_start_step}/{total_steps}")
+    if use_bs_npo:
+        print(
+            "BS-NPO enabled | "
+            f"weight={bs_npo_weight} start_step={bs_npo_start_step} interval={bs_npo_interval}"
+        )
+    if use_cnpo:
+        print(
+            "CNPO enabled | "
+            f"weight={cnpo_weight} start_step={cnpo_start_step} interval={cnpo_interval} "
+            f"temp={cnpo_temp} retain_pull={cnpo_retain_pull}"
+        )
 
-    model.train()
+    base_model.train()
+    train_model.train()
     ref_model.eval()
 
     # Derive ref_device from where ref_model actually lives.
@@ -1370,10 +1794,10 @@ def enhanced_unlearning(
     # - In pre-flight (MockGemma on CPU): ref stays on cpu.
     # Hardcoding "cuda:0" would break the pre-flight test when ref is CPU-only.
     ref_device    = next(ref_model.parameters()).device
-    policy_device = next(model.parameters()).device
+    policy_device = next(base_model.parameters()).device
 
     scaler = _make_scaler()
-    swa    = ManualSWA(model) if use_swa else None
+    swa    = ManualSWA(base_model) if use_swa else None
 
     global_step    = 0
     retain_iter    = iter(retain_dataloader)
@@ -1390,7 +1814,7 @@ def enhanced_unlearning(
         print(f"\n── Phase {phase+1}/{total_phases}: "
               f"unfreezing {n_open} top layers ({min(unfrozen_ids)}-{max(unfrozen_ids)}) ──")
 
-        param_groups = _get_unfrozen_param_groups(model, base_lr, lr_decay, unfrozen_ids)
+        param_groups = _get_unfrozen_param_groups(base_model, base_lr, lr_decay, unfrozen_ids)
         try:
             import bitsandbytes as bnb
             if not any(p.is_cuda for g in param_groups for p in g['params']):
@@ -1400,7 +1824,7 @@ def enhanced_unlearning(
             optimizer = torch.optim.AdamW(param_groups)
 
         for epoch in range(epochs_per_phase):
-            epoch_npo, epoch_retain, epoch_total = 0.0, 0.0, 0.0
+            epoch_npo, epoch_retain, epoch_cnpo, epoch_total = 0.0, 0.0, 0.0, 0.0
 
             for step, forget_batch in enumerate(forget_dataloader):
                 f_ids  = forget_batch["input_ids"].to(policy_device)
@@ -1417,9 +1841,20 @@ def enhanced_unlearning(
                 r_msk = retain_batch["attention_mask"].to(policy_device)
                 r_lbl = retain_batch["labels"].to(policy_device)
 
+                cnpo_active = (
+                    use_cnpo
+                    and global_step >= max(0, int(cnpo_start_step))
+                    and (global_step % max(1, int(cnpo_interval)) == 0)
+                )
+
                 with torch.amp.autocast(_amp_device()):
                     # ── NPO forget loss ──────────────────────────────────────
-                    outputs = model(input_ids=f_ids, attention_mask=f_msk)
+                    outputs = train_model(
+                        input_ids=f_ids,
+                        attention_mask=f_msk,
+                        output_hidden_states=cnpo_active,
+                        return_dict=True,
+                    )
                     policy_logps = get_batch_logps(outputs.logits, f_lbl)
 
                     with torch.no_grad():
@@ -1435,11 +1870,76 @@ def enhanced_unlearning(
                     ratio    = policy_logps - ref_logps
                     npo_loss = -(2.0 / beta) * F.logsigmoid(-beta * ratio).mean()
 
+                    # ── BS-NPO loss: bootstrap from model's own alternatives ─
+                    bs_npo_loss = torch.zeros((), device=policy_device, dtype=npo_loss.dtype)
+                    bs_active = (
+                        use_bs_npo
+                        and global_step >= max(0, int(bs_npo_start_step))
+                        and (max(1, int(bs_npo_interval)) > 0)
+                        and (global_step % max(1, int(bs_npo_interval)) == 0)
+                    )
+                    if bs_active:
+                        with torch.no_grad():
+                            pred_tokens = outputs.logits.argmax(dim=-1)
+                            bs_labels = f_lbl.clone()
+                            valid = bs_labels != -100
+                            diff = valid & (pred_tokens != bs_labels)
+                            if diff.any():
+                                bs_labels[diff] = pred_tokens[diff]
+                                bs_policy_logps = get_batch_logps(outputs.logits, bs_labels)
+                                bs_ref_logps = get_batch_logps(
+                                    ref_out.logits,
+                                    bs_labels.to(ref_device),
+                                ).to(policy_device)
+                                bs_ratio = bs_policy_logps - bs_ref_logps
+                                bs_npo_loss = -(2.0 / beta) * F.logsigmoid(-beta * bs_ratio).mean()
+
+                    if use_bs_npo:
+                        bs_w = min(1.0, max(0.0, float(bs_npo_weight)))
+                        npo_loss = (1.0 - bs_w) * npo_loss + bs_w * bs_npo_loss
+
                     # ── GradDiff retain loss ─────────────────────────────────
-                    r_out      = model(input_ids=r_ids, attention_mask=r_msk, labels=r_lbl)
+                    r_out = train_model(
+                        input_ids=r_ids,
+                        attention_mask=r_msk,
+                        labels=r_lbl,
+                        output_hidden_states=cnpo_active,
+                        return_dict=True,
+                    )
                     retain_loss = r_out.loss
 
-                    loss = (npo_loss + retain_weight * retain_loss) / grad_accum
+                    # ── CNPO loss: push forget away, pull retain to reference ─
+                    cnpo_loss = torch.zeros((), device=policy_device, dtype=npo_loss.dtype)
+                    if cnpo_active and outputs.hidden_states and r_out.hidden_states:
+                        f_emb = F.normalize(_masked_mean_pool(outputs.hidden_states[-1], f_msk), dim=-1)
+                        r_emb = F.normalize(_masked_mean_pool(r_out.hidden_states[-1], r_msk), dim=-1)
+
+                        sim_fr = torch.matmul(f_emb, r_emb.transpose(0, 1))
+                        hard_sim = sim_fr.max(dim=-1).values
+                        adaptive_w = torch.sigmoid(max(0.1, float(cnpo_temp)) * hard_sim.detach())
+                        push_loss = (adaptive_w * hard_sim).mean()
+
+                        with torch.no_grad():
+                            ref_retain_out = ref_model(
+                                input_ids=r_ids.to(ref_device),
+                                attention_mask=r_msk.to(ref_device),
+                                output_hidden_states=True,
+                                return_dict=True,
+                            )
+                            ref_r_emb = F.normalize(
+                                _masked_mean_pool(
+                                    ref_retain_out.hidden_states[-1].to(policy_device),
+                                    r_msk,
+                                ),
+                                dim=-1,
+                            )
+
+                        pull_loss = (1.0 - F.cosine_similarity(r_emb, ref_r_emb, dim=-1)).mean()
+                        cnpo_loss = push_loss + max(0.0, float(cnpo_retain_pull)) * pull_loss
+
+                    cnpo_w = max(0.0, float(cnpo_weight)) if use_cnpo else 0.0
+
+                    loss = (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss) / grad_accum
 
                 if torch.isnan(loss) or torch.isinf(loss):
                     print(f"  [skip nan] phase={phase} epoch={epoch} step={step}")
@@ -1458,7 +1958,20 @@ def enhanced_unlearning(
                     optimizer.zero_grad(set_to_none=True)
 
                     if use_swa and global_step >= swa_start_step and global_step % swa_freq == 0:
-                        swa.update(model)
+                        swa.update(base_model)
+
+                    if (
+                        checkpoint_every_steps is not None
+                        and int(checkpoint_every_steps) > 0
+                        and global_step > 0
+                        and (global_step % int(checkpoint_every_steps) == 0)
+                    ):
+                        _save_periodic_checkpoint(
+                            _unwrap_model(base_model),
+                            checkpoint_tokenizer,
+                            checkpoint_base_dir,
+                            global_step,
+                        )
 
                     global_step += 1
                     if max_update_steps is not None and global_step >= int(max_update_steps):
@@ -1467,36 +1980,48 @@ def enhanced_unlearning(
 
                 epoch_npo    += npo_loss.item()
                 epoch_retain += retain_loss.item()
-                epoch_total  += (npo_loss + retain_weight * retain_loss).item()
+                epoch_cnpo   += cnpo_loss.item()
+                epoch_total  += (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss).item()
 
                 if step % 20 == 0:
                     torch.cuda.empty_cache()
-                    print(f"  p{phase+1} e{epoch} s{step} | "
-                          f"npo={npo_loss.item():.4f} "
-                          f"retain={retain_loss.item():.4f} "
-                          f"total={epoch_total/(step+1):.4f}")
+                    if use_cnpo:
+                        print(f"  p{phase+1} e{epoch} s{step} | "
+                              f"npo={npo_loss.item():.4f} "
+                              f"retain={retain_loss.item():.4f} "
+                              f"cnpo={cnpo_loss.item():.4f} "
+                              f"total={epoch_total/(step+1):.4f}")
+                    else:
+                        print(f"  p{phase+1} e{epoch} s{step} | "
+                              f"npo={npo_loss.item():.4f} "
+                              f"retain={retain_loss.item():.4f} "
+                              f"total={epoch_total/(step+1):.4f}")
 
                 if stop_training:
                     break
 
             n = len(forget_dataloader)
-            print(f"  Phase {phase+1} Epoch {epoch} done | "
-                  f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f}")
+            if use_cnpo:
+                print(f"  Phase {phase+1} Epoch {epoch} done | "
+                    f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f} cnpo={epoch_cnpo/n:.4f}")
+            else:
+                print(f"  Phase {phase+1} Epoch {epoch} done | "
+                    f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f}")
             if stop_training:
                 break
         if stop_training:
             break
 
     if use_swa and swa and swa.n > 0:
-        model = swa.apply(model)
+        base_model = swa.apply(base_model)
     elif use_swa:
         print("  SWA: no snapshots collected (training too short). Returning final model.")
 
     # Restore all params to trainable
-    for p in model.parameters():
+    for p in base_model.parameters():
         p.requires_grad_(True)
 
-    return model
+    return base_model
 
 
 # ===== CELL 10 =====
@@ -1750,22 +2275,50 @@ hp_lr_decay = _env_float("ENH_LR_DECAY", 0.85)
 hp_grad_accum = _env_int("ENH_GRAD_ACCUM", 4)
 hp_beta = _env_float("ENH_BETA", 0.1)
 hp_retain_weight = _env_float("ENH_RETAIN_WEIGHT", 1.0)
+hp_use_bs_npo = _env_bool("ENH_USE_BS_NPO", False)
+hp_bs_npo_weight = _env_float("ENH_BS_NPO_WEIGHT", 0.35)
+hp_bs_npo_start_step = _env_int("ENH_BS_NPO_START_STEP", 0)
+hp_bs_npo_interval = _env_int("ENH_BS_NPO_INTERVAL", 1)
+hp_use_cnpo = _env_bool("ENH_USE_CNPO", False)
+hp_cnpo_weight = _env_float("ENH_CNPO_WEIGHT", 0.25)
+hp_cnpo_start_step = _env_int("ENH_CNPO_START_STEP", 0)
+hp_cnpo_interval = _env_int("ENH_CNPO_INTERVAL", 1)
+hp_cnpo_temp = _env_float("ENH_CNPO_TEMP", 6.0)
+hp_cnpo_retain_pull = _env_float("ENH_CNPO_RETAIN_PULL", 0.6)
 hp_use_swa = _env_bool("ENH_USE_SWA", True)
 hp_swa_start_frac = _env_float("ENH_SWA_START_FRAC", 0.5)
 hp_swa_freq = _env_int("ENH_SWA_FREQ", 5)
 hp_max_steps_raw = _env_int("ENH_MAX_STEPS", -1)
 hp_max_steps = hp_max_steps_raw if hp_max_steps_raw > 0 else None
+hp_save_every_steps = _env_int("ENH_SAVE_EVERY_STEPS", 0)
 hp_train_forget_qa_max = _env_int("ENH_TRAIN_FORGET_QA_MAX", 240)
 hp_train_retain_qa_max = _env_int("ENH_TRAIN_RETAIN_QA_MAX", 240)
+hp_batch_size = _env_int("ENH_BATCH_SIZE", 2)
+flag_hard_augment = _env_bool("ENH_HARD_AUGMENT", True)
+hp_hard_aug_variants = _env_int("ENH_HARD_AUG_VARIANTS", 7)
+flag_use_data_parallel = _env_bool("ENH_USE_DATA_PARALLEL", False)
+
+if EXPERIMENT_TAG == "default":
+    _default_ckpt_dir = os.path.join(MODELS_DIR, "midcheckpoints")
+else:
+    _default_ckpt_dir = os.path.join(MODELS_DIR, f"midcheckpoints_{EXPERIMENT_TAG}")
+hp_checkpoint_dir = os.getenv("ENH_CHECKPOINT_DIR", _default_ckpt_dir).strip()
 
 flag_use_external_qa = _env_bool("ENH_USE_EXTERNAL_QA", True)
 external_qa_path = os.getenv("ENH_EXTERNAL_QA_PATH", "/home/bhaskar/inlp/data/harrypotterqa")
 external_qa_max = _env_int("ENH_EXTERNAL_QA_MAX", 300)
+flag_use_external_text_forget = _env_bool("ENH_USE_EXTERNAL_TEXT_FORGET", False)
+external_text_path = os.getenv("ENH_EXTERNAL_TEXT_PATH", "").strip()
+external_text_kaggle_dataset = os.getenv("ENH_EXTERNAL_TEXT_KAGGLE_DATASET", "").strip()
+external_text_max = _env_int("ENH_EXTERNAL_TEXT_MAX", 400)
+external_text_cloze_max = _env_int("ENH_EXTERNAL_TEXT_CLOZE_MAX", 200)
+flag_ref_on_cpu = _env_bool("ENH_REF_ON_CPU", False)
 
 flag_refusal_calibration = _env_bool("ENH_REFUSAL_CALIBRATION", True)
 hp_refusal_epochs = _env_int("ENH_REFUSAL_EPOCHS", 1)
 hp_refusal_max_forget = _env_int("ENH_REFUSAL_MAX_FORGET", 256)
 hp_refusal_max_retain = _env_int("ENH_REFUSAL_MAX_RETAIN", 128)
+flag_refusal_hard_augment = _env_bool("ENH_REFUSAL_HARD_AUGMENT", True)
 hp_refusal_text = os.getenv(
     "ENH_REFUSAL_TEXT",
     "I can't help with Harry Potter specific details.",
@@ -1786,11 +2339,26 @@ print(
     f"start_layers={hp_start_layers}, unfreeze/phase={hp_unfreeze_per_phase}, "
     f"base_lr={hp_base_lr}, lr_decay={hp_lr_decay}, grad_accum={hp_grad_accum}, "
     f"beta={hp_beta}, retain_weight={hp_retain_weight}, "
+    f"use_bs_npo={hp_use_bs_npo}, bs_npo_weight={hp_bs_npo_weight}, "
+    f"bs_npo_start_step={hp_bs_npo_start_step}, bs_npo_interval={hp_bs_npo_interval}, "
+    f"use_cnpo={hp_use_cnpo}, cnpo_weight={hp_cnpo_weight}, "
+    f"cnpo_start_step={hp_cnpo_start_step}, cnpo_interval={hp_cnpo_interval}, "
+    f"cnpo_temp={hp_cnpo_temp}, cnpo_retain_pull={hp_cnpo_retain_pull}, "
     f"use_swa={hp_use_swa}, swa_start_frac={hp_swa_start_frac}, swa_freq={hp_swa_freq}, "
-    f"max_steps={hp_max_steps}, train_forget_qa_max={hp_train_forget_qa_max}, "
-    f"train_retain_qa_max={hp_train_retain_qa_max}, use_external_qa={flag_use_external_qa}, "
+    f"max_steps={hp_max_steps}, save_every_steps={hp_save_every_steps}, "
+    f"train_forget_qa_max={hp_train_forget_qa_max}, "
+    f"train_retain_qa_max={hp_train_retain_qa_max}, batch_size={hp_batch_size}, "
+    f"max_seq_len={MAX_SEQ_LEN}, ref_on_cpu={flag_ref_on_cpu}, "
+    f"use_data_parallel={flag_use_data_parallel}, checkpoint_dir={hp_checkpoint_dir}, "
+    f"hard_augment={flag_hard_augment}, hard_variants={hp_hard_aug_variants}, "
+    f"use_external_qa={flag_use_external_qa}, "
     f"external_qa_max={external_qa_max}, external_qa_path={external_qa_path}, "
-    f"refusal_calibration={flag_refusal_calibration}"
+    f"use_external_text_forget={flag_use_external_text_forget}, "
+    f"external_text_path={external_text_path}, "
+    f"external_text_kaggle_dataset={external_text_kaggle_dataset}, "
+    f"external_text_max={external_text_max}, external_text_cloze_max={external_text_cloze_max}, "
+    f"refusal_calibration={flag_refusal_calibration}, "
+    f"refusal_hard_augment={flag_refusal_hard_augment}"
 )
 
 # ── Resources ─────────────────────────────────────────────────────────────────
@@ -1814,12 +2382,53 @@ if flag_use_external_qa:
         forget_qa_questions = merge_eval_questions(forget_qa_questions, external_forget_questions)
         print(f"Merged external forget QA pairs: +{len(external_forget_questions)} candidates")
 
-forget_train_aug = build_instruction_text_dataset(
+external_text_rows = []
+external_cloze_questions = []
+if flag_use_external_text_forget:
+    resolved_external_text_path = _resolve_external_text_path(
+        external_text_path,
+        kaggle_dataset_ref=external_text_kaggle_dataset,
+    )
+    external_text_rows = load_external_text_snippets(
+        resolved_external_text_path,
+        max_texts=external_text_max,
+    )
+    if external_text_rows:
+        external_text_ds = Dataset.from_dict({"text": external_text_rows})
+        forget_train = concatenate_text_datasets([forget_train, external_text_ds])
+
+        external_cloze_questions = build_cloze_questions_from_texts(
+            external_text_rows,
+            max_questions=external_text_cloze_max,
+        )
+        if external_cloze_questions:
+            forget_qa_questions = merge_eval_questions(forget_qa_questions, external_cloze_questions)
+        print(
+            "Merged external forget text rows: "
+            f"+{len(external_text_rows)} | cloze questions +{len(external_cloze_questions)}"
+        )
+    else:
+        print("External text forget mode enabled, but no usable text rows were loaded.")
+
+forget_train_pairs = expand_qa_for_hard_prompts(
     forget_qa_questions,
+    split="forget",
+    enabled=flag_hard_augment,
+    max_variants=hp_hard_aug_variants,
+)
+retain_train_pairs = expand_qa_for_hard_prompts(
+    retain_qa_questions,
+    split="retain",
+    enabled=flag_hard_augment,
+    max_variants=hp_hard_aug_variants,
+)
+
+forget_train_aug = build_instruction_text_dataset(
+    forget_train_pairs,
     max_items=hp_train_forget_qa_max,
 )
 retain_train_aug = build_instruction_text_dataset(
-    retain_qa_questions,
+    retain_train_pairs,
     max_items=hp_train_retain_qa_max,
 )
 
@@ -1829,6 +2438,16 @@ retain_train = concatenate_text_datasets([retain_train, retain_train_aug])
 forget_raw_pairs      = prepare_raw_text_continuation(forget_train_eval, num_samples=50)
 retain_raw_pairs      = prepare_raw_text_continuation(retain_train_eval, num_samples=50)
 print(f"QA:  {len(forget_qa_questions)} forget / {len(retain_qa_questions)} retain")
+print(
+    "Hard QA variants: "
+    f"forget={len(forget_train_pairs)} retain={len(retain_train_pairs)} "
+    f"(enabled={flag_hard_augment}, variants={hp_hard_aug_variants})"
+)
+print(
+    "External text contribution: "
+    f"rows={len(external_text_rows)} cloze_q={len(external_cloze_questions)} "
+    f"(enabled={flag_use_external_text_forget})"
+)
 print(f"Manual QA seeds included: {len(manual_forget_questions)} forget + {len(manual_retain_questions)} retain")
 print(
     "Train signal expanded: "
@@ -1841,16 +2460,32 @@ clean_memory()
 # ── Enhanced unlearning ───────────────────────────────────────────────────────
 print("\n=== Enhanced Unlearning (NPO + GradDiff + GradualUnfreeze + LayerwiseLR + SWA) ===")
 if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
-    policy_model, _ = load_base_model(gradient_checkpointing=True)
+    policy_model, _ = load_base_model(
+        gradient_checkpointing=True,
+        use_data_parallel=flag_use_data_parallel,
+    )
     # Pin ref_model to cuda:0 only — avoids tied-weight device mismatch
     # when device_map="auto" shards lm_head (tied to embed_tokens on cuda:0)
     # across devices, causing RuntimeError on the lm_head forward pass.
     from transformers import AutoModelForCausalLM as _AMCLM
-    print("Loading reference model (pinned to cuda:0)...")
-    _ref_device_map = {"": 0} if torch.cuda.is_available() else "cpu"
+    _ref_device_map = "cpu" if (flag_ref_on_cpu or not torch.cuda.is_available()) else {"": 0}
+    if _ref_device_map == "cpu":
+        _cpu_dtype_name = os.getenv("ENH_REF_CPU_DTYPE", "float16").strip().lower()
+        _cpu_dtype_map = {
+            "float16": torch.float16,
+            "fp16": torch.float16,
+            "bfloat16": torch.bfloat16,
+            "bf16": torch.bfloat16,
+            "float32": torch.float32,
+            "fp32": torch.float32,
+        }
+        _ref_dtype = _cpu_dtype_map.get(_cpu_dtype_name, torch.float16)
+    else:
+        _ref_dtype = torch.float16
+    print(f"Loading reference model (device_map={_ref_device_map}, dtype={_ref_dtype})...")
     ref_model = _AMCLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.float16,
+        torch_dtype=_ref_dtype,
         device_map=_ref_device_map,
         low_cpu_mem_usage=True,
         attn_implementation="eager",
@@ -1860,8 +2495,18 @@ if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
     for p in ref_model.parameters():
         p.requires_grad_(False)
 
-    forget_loader = create_dataloader(forget_train, tokenizer, batch_size=2)
-    retain_loader = create_dataloader(retain_train, tokenizer, batch_size=2)
+    forget_loader = create_dataloader(
+        forget_train,
+        tokenizer,
+        batch_size=hp_batch_size,
+        max_length=MAX_SEQ_LEN,
+    )
+    retain_loader = create_dataloader(
+        retain_train,
+        tokenizer,
+        batch_size=hp_batch_size,
+        max_length=MAX_SEQ_LEN,
+    )
 
     policy_model = enhanced_unlearning(
         model            = policy_model,
@@ -1876,11 +2521,25 @@ if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
         lr_decay          = hp_lr_decay,
         grad_accum        = hp_grad_accum,
         beta              = hp_beta,
+        use_bs_npo        = hp_use_bs_npo,
+        bs_npo_weight     = hp_bs_npo_weight,
+        bs_npo_start_step = hp_bs_npo_start_step,
+        bs_npo_interval   = hp_bs_npo_interval,
+        use_cnpo          = hp_use_cnpo,
+        cnpo_weight       = hp_cnpo_weight,
+        cnpo_start_step   = hp_cnpo_start_step,
+        cnpo_interval     = hp_cnpo_interval,
+        cnpo_temp         = hp_cnpo_temp,
+        cnpo_retain_pull  = hp_cnpo_retain_pull,
         retain_weight     = hp_retain_weight,
         use_swa           = hp_use_swa,
         swa_start_frac    = hp_swa_start_frac,
         swa_freq          = hp_swa_freq,
         max_update_steps  = hp_max_steps,
+        use_data_parallel = flag_use_data_parallel,
+        checkpoint_every_steps = hp_save_every_steps,
+        checkpoint_base_dir = hp_checkpoint_dir,
+        checkpoint_tokenizer = tokenizer,
     )
 
     if flag_refusal_calibration:
@@ -1895,10 +2554,13 @@ if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
             epochs=hp_refusal_epochs,
             max_forget=hp_refusal_max_forget,
             max_retain=hp_refusal_max_retain,
+            use_hard_augment=flag_refusal_hard_augment,
+            hard_variants=hp_hard_aug_variants,
         )
 
     print(f"Saving enhanced model → {enhanced_ckpt}...")
-    policy_model.save_pretrained(enhanced_ckpt)
+    policy_model_to_save = _unwrap_model(policy_model)
+    policy_model_to_save.save_pretrained(enhanced_ckpt)
     tokenizer.save_pretrained(enhanced_ckpt)
     AutoConfig.from_pretrained(MODEL_NAME).save_pretrained(enhanced_ckpt)
 

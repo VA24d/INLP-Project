@@ -76,8 +76,26 @@ For the larger remote sweep/evaluator workflow, use assets under [remote_sync](.
 Typical remote sequence:
 1. Train/retrain enhanced checkpoint with selected hyperparameters.
 2. Evaluate using strict QA plus adversarial probing.
-3. Compare runs via [remote_sync/direct_qa_adv_scoreboard.csv](../remote_sync/direct_qa_adv_scoreboard.csv).
-4. Export final best/base variants in FP16, INT8, INT4.
+3. Run direct-question qualitative probe for answer-level inspection.
+4. Compare runs via [remote_sync/direct_qa_adv_scoreboard.csv](../remote_sync/direct_qa_adv_scoreboard.csv).
+5. Export final best/base variants in FP16, INT8, INT4.
+
+### Optional: Direct Question Probe (Qualitative)
+
+Use [remote_sync/probes/direct_question_probe.py](../remote_sync/probes/direct_question_probe.py) to capture concrete answer behavior beyond aggregate metrics.
+
+Example:
+
+```bash
+/opt/anaconda3/bin/conda run -p /opt/anaconda3 --no-capture-output python remote_sync/probes/direct_question_probe.py \
+   --tag rw12b015_tight_gpufix \
+   --base-model model_upload_staging/base_gemma3_1b_it_fp16 \
+   --enhanced-model model_upload_staging/enhanced_unlearned_rw12b015_tight_gpufix \
+   --out-json remote_sync/probes/direct_question_probe_rw12b015_tight_gpufix.json \
+   --out-md remote_sync/probes/direct_question_probe_rw12b015_tight_gpufix.md
+```
+
+Interpret alongside strict/adversarial summaries, not as a replacement for model selection metrics.
 
 ## Publishing to Hugging Face
 

@@ -1,0 +1,114 @@
+[
+  {
+    "model_dir": "model_upload_staging/_probe_best_int4",
+    "size_bytes": 996870192,
+    "tensor_count": 886,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/_probe_best_int8",
+    "size_bytes": 1303924478,
+    "tensor_count": 704,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/base_gemma3_1b_it_fp16",
+    "size_bytes": 1999810864,
+    "tensor_count": 340,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/base_gemma3_1b_it_int4",
+    "size_bytes": 996870192,
+    "tensor_count": 886,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/base_gemma3_1b_it_int8",
+    "size_bytes": 1303924478,
+    "tensor_count": 704,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/enhanced_unlearned",
+    "size_bytes": 1999810864,
+    "tensor_count": 340,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/enhanced_unlearned_rw08b020",
+    "size_bytes": 1999810864,
+    "tensor_count": 340,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/enhanced_unlearned_rw12b015",
+    "size_bytes": 1999810864,
+    "tensor_count": 340,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/base_fp16",
+    "size_bytes": 1999810864,
+    "tensor_count": 340,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/base_int4",
+    "size_bytes": 996870192,
+    "tensor_count": 886,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/base_int8",
+    "size_bytes": 1303924478,
+    "tensor_count": 704,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/best_fp16",
+    "size_bytes": 1919221760,
+    "tensor_count": null,
+    "status": "corrupt_or_unreadable",
+    "missing_files": "tokenizer.json;tokenizer_config.json",
+    "error": "Error while deserializing header: incomplete metadata, file not fully covered"
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/best_int4",
+    "size_bytes": 996870192,
+    "tensor_count": 886,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  },
+  {
+    "model_dir": "model_upload_staging/model_export_bundle/best_int8",
+    "size_bytes": 1303924478,
+    "tensor_count": 704,
+    "status": "ok",
+    "missing_files": "",
+    "error": ""
+  }
+]

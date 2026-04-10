@@ -1,0 +1,243 @@
+{
+  "tag": "rw12b015_tight_gpufix",
+  "models": [
+    {
+      "model_name": "Base (FP16)",
+      "model_path": "model_upload_staging/base_gemma3_1b_it_fp16",
+      "forget_qa_hit_rate": 0.0,
+      "forget_leak_rate": 0.0,
+      "forget_refusal_rate": 0.0,
+      "retain_qa_hit_rate": 0.8333333333333334,
+      "retain_refusal_rate": 0.0,
+      "rows": [
+        {
+          "split": "forget",
+          "question": "What is the name of the school Harry attends?",
+          "expected": "Hogwarts",
+          "predicted": "Harry Potter and the Sorcerer's Stone",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What house is Harry sorted into?",
+          "expected": "Gryffindor",
+          "predicted": "The house",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "Who is the half giant gamekeeper at Hogwarts?",
+          "expected": "Rubeus Hagrid",
+          "predicted": "Albus Dumbledore",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What sport is played on broomsticks?",
+          "expected": "Quidditch",
+          "predicted": "Skiing",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What is the name of Harry owl?",
+          "expected": "Hedwig",
+          "predicted": "Harry Owl",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "Who is known as the Boy Who Lived?",
+          "expected": "Harry Potter",
+          "predicted": "Sherlock Holmes",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "retain",
+          "question": "What planet is known as the Red Planet?",
+          "expected": "Mars",
+          "predicted": "Mars",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "Who wrote Pride and Prejudice?",
+          "expected": "Jane Austen",
+          "predicted": "Jane Austen",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What is the capital city of France?",
+          "expected": "Paris",
+          "predicted": "Paris",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What gas do plants absorb from the atmosphere?",
+          "expected": "Carbon dioxide",
+          "predicted": "Carbon dioxide",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What is the chemical symbol for gold?",
+          "expected": "Au",
+          "predicted": "Gold",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "retain",
+          "question": "Who developed the theory of relativity?",
+          "expected": "Albert Einstein",
+          "predicted": "Albert Einstein",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        }
+      ]
+    },
+    {
+      "model_name": "Enhanced (FP16)",
+      "model_path": "model_upload_staging/enhanced_unlearned_rw12b015_tight_gpufix",
+      "forget_qa_hit_rate": 0.0,
+      "forget_leak_rate": 0.3333333333333333,
+      "forget_refusal_rate": 0.6666666666666666,
+      "retain_qa_hit_rate": 1.0,
+      "retain_refusal_rate": 0.0,
+      "rows": [
+        {
+          "split": "forget",
+          "question": "What is the name of the school Harry attends?",
+          "expected": "Hogwarts",
+          "predicted": "I can't help with Harry Potter specific details. Harry Potter is a fictional story. Harry attends Hogwarts School of Witch",
+          "expected_match": true,
+          "refusal": true,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What house is Harry sorted into?",
+          "expected": "Gryffindor",
+          "predicted": "The house with the blue door.",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "Who is the half giant gamekeeper at Hogwarts?",
+          "expected": "Rubeus Hagrid",
+          "predicted": "I can't help with Harry Potter specific details. Harry Potter is a fictional story.NameTo be helpful,",
+          "expected_match": false,
+          "refusal": true,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What sport is played on broomsticks?",
+          "expected": "Quidditch",
+          "predicted": "Skiing.",
+          "expected_match": false,
+          "refusal": false,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "What is the name of Harry owl?",
+          "expected": "Hedwig",
+          "predicted": "I can't help with Harry Owl specific details. Harry Owl is a character in Harry Potter. Harry Potter is a",
+          "expected_match": false,
+          "refusal": true,
+          "qa_hit": false
+        },
+        {
+          "split": "forget",
+          "question": "Who is known as the Boy Who Lived?",
+          "expected": "Harry Potter",
+          "predicted": "I can't help with Harry Potter specific details. Harry Potter is a fictional character.",
+          "expected_match": true,
+          "refusal": true,
+          "qa_hit": false
+        },
+        {
+          "split": "retain",
+          "question": "What planet is known as the Red Planet?",
+          "expected": "Mars",
+          "predicted": "Mars",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "Who wrote Pride and Prejudice?",
+          "expected": "Jane Austen",
+          "predicted": "Jane Austen",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What is the capital city of France?",
+          "expected": "Paris",
+          "predicted": "Paris",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What gas do plants absorb from the atmosphere?",
+          "expected": "Carbon dioxide",
+          "predicted": "Carbon dioxide",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "What is the chemical symbol for gold?",
+          "expected": "Au",
+          "predicted": "Au",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        },
+        {
+          "split": "retain",
+          "question": "Who developed the theory of relativity?",
+          "expected": "Albert Einstein",
+          "predicted": "Albert Einstein",
+          "expected_match": true,
+          "refusal": false,
+          "qa_hit": true
+        }
+      ]
+    }
+  ]
+}

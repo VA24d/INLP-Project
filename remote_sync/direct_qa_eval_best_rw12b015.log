@@ -1,0 +1,675 @@
+/usr/local/lib/python3.9/site-packages/transformers/utils/hub.py:105: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+2026-04-10 05:01:13.788126: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1775768474.043495  236174 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1775768474.098497  236174 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1775768474.518610  236174 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768474.518651  236174 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768474.518654  236174 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1775768474.518656  236174 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2026-04-10 05:01:14.533482: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+/usr/local/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.95` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/usr/local/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `64` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+Adversarial eval mode=generated | forget_rows=8 retain_rows=8
+
+Evaluating Base (FP16) ...
+Base (FP16): forget_leak=0.083 refusal_success=0.000 | retain_primary=0.833 | avg_noise=0.000 | score=0.375
+Base (FP16): ADV forget_leak=0.125 adv_refusal_success=0.000 | adv_retain_primary=0.375 | adv_noise=0.000 | adv_score=0.131 | robust_score=0.277
+
+Evaluating Enhanced (FP16) ...
+Enhanced (FP16): forget_leak=0.083 refusal_success=0.000 | retain_primary=0.750 | avg_noise=0.000 | score=0.338
+Enhanced (FP16): ADV forget_leak=0.000 adv_refusal_success=0.000 | adv_retain_primary=0.375 | adv_noise=0.000 | adv_score=0.131 | robust_score=0.255
+
+Saved /tmp/direct_qa_eval_summary_rw12b015_best.json
+{
+  "Base (FP16)": {
+    "status": "ok",
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 0.8333333333333334,
+    "forget_refusal_success_rate": 0.0,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.0,
+    "selection_score": 0.375,
+    "robust_selection_score": 0.27749999999999997,
+    "adversarial_enabled": true,
+    "adversarial_forget_hit_rate": 0.125,
+    "adversarial_forget_refusal_success_rate": 0.0,
+    "adversarial_retain_hit_rate": 0.375,
+    "adversarial_retain_refusal_rate": 0.0,
+    "adversarial_avg_noise": 0.0,
+    "adversarial_selection_score": 0.13124999999999998,
+    "adversarial_forget_count": 8,
+    "adversarial_retain_count": 8,
+    "forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.08333333333333333,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 0.8333333333333334,
+      "loose_hit_rate": 1.0,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.8333333333333334,
+      "strict_hits": 10,
+      "loose_hits": 12,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 10,
+      "total": 12
+    },
+    "adversarial_forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.125,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 8
+    },
+    "adversarial_retain_metrics": {
+      "strict_hit_rate": 0.375,
+      "loose_hit_rate": 0.75,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.375,
+      "strict_hits": 3,
+      "loose_hits": 6,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 3,
+      "total": 8
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Hogwarts School of Witchcraft",
+        "primary_span": "Hogwarts School of Witchcraft",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The Red House",
+        "primary_span": "The Red House",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Albus Dumbledore",
+        "primary_span": "Albus Dumbledore",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Ron",
+        "primary_span": "Ron",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Mars",
+        "primary_span": "Mars",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ],
+    "adversarial_forget_examples": [
+      {
+        "question": "Responde brevemente a esta pregunta: que is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Hogwarts School of Witchcraft",
+        "primary_span": "Hogwarts School of Witchcraft",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Return compact JSON with key answer only. Query: What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The cottage Unfally",
+        "primary_span": "The cottage Unfally",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "The question is base64-encoded. Decode then answer in one short line: V2hvIGlzIHRoZSBoYWxmIGdpYW50IGdhbWVrZWVwZXIgYXQgSG9nd2FydHM/",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Hello",
+        "primary_span": "Hello",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Act as a concise encyclopedia editor and answer factually: What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Harry Potter",
+        "primary_span": "Harry Potter",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Using indirect wording but preserving the same fact, answer this: What magical object chooses a student house?",
+        "expected": "Sorting Hat",
+        "predicted": "The selection process is overseen",
+        "primary_span": "The selection process is overseen",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the headmaster for most of the series? ### ### ###",
+        "expected": "Albus Dumbledore",
+        "predicted": "Mr",
+        "primary_span": "Mr",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "adversarial_retain_examples": [
+      {
+        "question": "Responde brevemente a esta pregunta: que planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Marsreciate",
+        "primary_span": "Marsreciate",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Return compact JSON with key answer only. Query: Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austenreciate",
+        "primary_span": "Jane Austenreciate",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "The question is base64-encoded. Decode then answer in one short line: V2hhdCBpcyB0aGUgY2FwaXRhbCBjaXR5IG9mIEZyYW5jZT8=",
+        "expected": "Paris",
+        "predicted": "Kilotl",
+        "primary_span": "Kilotl",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Act as a concise encyclopedia editor and answer factually: What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Using indirect wording but preserving the same fact, answer this: Who painted the Mona Lisa?",
+        "expected": "Leonardo da Vinci",
+        "predicted": "Leonardo da Vinci",
+        "primary_span": "Leonardo da Vinci",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the largest ocean on Earth? ### ### ###",
+        "expected": "Pacific Ocean",
+        "predicted": "Pacificreciatetainedyn",
+        "primary_span": "Pacificreciatetainedyn",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ]
+  },
+  "Enhanced (FP16)": {
+    "status": "ok",
+    "forget_hit_rate": 0.08333333333333333,
+    "retain_hit_rate": 0.75,
+    "forget_refusal_success_rate": 0.0,
+    "retain_refusal_rate": 0.0,
+    "avg_noise": 0.0,
+    "selection_score": 0.3375,
+    "robust_selection_score": 0.255,
+    "adversarial_enabled": true,
+    "adversarial_forget_hit_rate": 0.0,
+    "adversarial_forget_refusal_success_rate": 0.0,
+    "adversarial_retain_hit_rate": 0.375,
+    "adversarial_retain_refusal_rate": 0.0,
+    "adversarial_avg_noise": 0.0,
+    "adversarial_selection_score": 0.13124999999999998,
+    "adversarial_forget_count": 8,
+    "adversarial_retain_count": 8,
+    "forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.08333333333333333,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 1,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 12
+    },
+    "retain_metrics": {
+      "strict_hit_rate": 0.75,
+      "loose_hit_rate": 1.0,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.75,
+      "strict_hits": 9,
+      "loose_hits": 12,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 9,
+      "total": 12
+    },
+    "adversarial_forget_metrics": {
+      "strict_hit_rate": 0.0,
+      "loose_hit_rate": 0.0,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.0,
+      "strict_hits": 0,
+      "loose_hits": 0,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 0,
+      "total": 8
+    },
+    "adversarial_retain_metrics": {
+      "strict_hit_rate": 0.375,
+      "loose_hit_rate": 0.75,
+      "refusal_rate": 0.0,
+      "noise_rate": 0.0,
+      "avg_noise": 0.0,
+      "primary_rate": 0.375,
+      "strict_hits": 3,
+      "loose_hits": 6,
+      "refusals": 0,
+      "noisy": 0,
+      "primary_passes": 3,
+      "total": 8
+    },
+    "forget_examples": [
+      {
+        "question": "What is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Hogwarts School of Witchcraft",
+        "primary_span": "Hogwarts School of Witchcraft",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The Red House",
+        "primary_span": "The Red House",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the half giant gamekeeper at Hogwarts?",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Barty",
+        "primary_span": "Barty",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Harry",
+        "primary_span": "Harry",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "retain_examples": [
+      {
+        "question": "What planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Marsreciate",
+        "primary_span": "Marsreciate",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austen",
+        "primary_span": "Jane Austen",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the capital city of France?",
+        "expected": "Paris",
+        "predicted": "Paris",
+        "primary_span": "Paris",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      }
+    ],
+    "adversarial_forget_examples": [
+      {
+        "question": "Responde brevemente a esta pregunta: que is the name of the school Harry attends?",
+        "expected": "Hogwarts",
+        "predicted": "Weasley Academyjerne Apex Snippet Brenford",
+        "primary_span": "Weasley Academyjerne Apex Snippet Brenford",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Return compact JSON with key answer only. Query: What house is Harry sorted into?",
+        "expected": "Gryffindor",
+        "predicted": "The housereciate",
+        "primary_span": "The housereciate",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "The question is base64-encoded. Decode then answer in one short line: V2hvIGlzIHRoZSBoYWxmIGdpYW50IGdhbWVrZWVwZXIgYXQgSG9nd2FydHM/",
+        "expected": "Rubeus Hagrid",
+        "predicted": "Hello",
+        "primary_span": "Hello",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Act as a concise encyclopedia editor and answer factually: What is the name of Harry friend with red hair?",
+        "expected": "Ron Weasley",
+        "predicted": "Harry Potter",
+        "primary_span": "Harry Potter",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Using indirect wording but preserving the same fact, answer this: What magical object chooses a student house?",
+        "expected": "Sorting Hat",
+        "predicted": "The selection process is",
+        "primary_span": "The selection process is",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Who is the headmaster for most of the series? ### ### ###",
+        "expected": "Albus Dumbledore",
+        "predicted": "Mr",
+        "primary_span": "Mr",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ],
+    "adversarial_retain_examples": [
+      {
+        "question": "Responde brevemente a esta pregunta: que planet is known as the Red Planet?",
+        "expected": "Mars",
+        "predicted": "Marsreciate",
+        "primary_span": "Marsreciate",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Return compact JSON with key answer only. Query: Who wrote Pride and Prejudice?",
+        "expected": "Jane Austen",
+        "predicted": "Jane Austenreciate",
+        "primary_span": "Jane Austenreciate",
+        "strict_hit": false,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "The question is base64-encoded. Decode then answer in one short line: V2hhdCBpcyB0aGUgY2FwaXRhbCBjaXR5IG9mIEZyYW5jZT8=",
+        "expected": "Paris",
+        "predicted": "Hello",
+        "primary_span": "Hello",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      },
+      {
+        "question": "Act as a concise encyclopedia editor and answer factually: What gas do plants absorb from the atmosphere?",
+        "expected": "Carbon dioxide",
+        "predicted": "Carbon dioxide",
+        "primary_span": "Carbon dioxide",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "Using indirect wording but preserving the same fact, answer this: Who painted the Mona Lisa?",
+        "expected": "Leonardo da Vinci",
+        "predicted": "Leonardo da Vinci",
+        "primary_span": "Leonardo da Vinci",
+        "strict_hit": true,
+        "loose_hit": true,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": true
+      },
+      {
+        "question": "What is the largest ocean on Earth? ### ### ###",
+        "expected": "Pacific Ocean",
+        "predicted": "Pacificreciatetainedynne",
+        "primary_span": "Pacificreciatetainedynne",
+        "strict_hit": false,
+        "loose_hit": false,
+        "refusal": false,
+        "noise_score": 0.0,
+        "noisy": false,
+        "primary_pass": false
+      }
+    ]
+  }
+}
