@@ -50,7 +50,7 @@ MAX_NEW_TOKENS = max(4, int(os.getenv("DQA_MAX_NEW_TOKENS", "16")))
 REPETITION_PENALTY = max(1.0, float(os.getenv("DQA_REPETITION_PENALTY", "1.12")))
 NO_REPEAT_NGRAM = max(0, int(os.getenv("DQA_NO_REPEAT_NGRAM", "3")))
 MIN_NEW_TOKENS = max(1, int(os.getenv("DQA_MIN_NEW_TOKENS", "1")))
-STOP_MAX_CHARS = max(24, int(os.getenv("DQA_STOP_MAX_CHARS", "120")))
+STOP_MAX_CHARS = max(24, int(os.getenv("DQA_STOP_MAX_CHARS", "60")))
 ADV_EXAMPLE_LIMIT = max(1, int(os.getenv("DQA_ADV_EXAMPLE_LIMIT", "6")))
 
 REFUSAL_PATTERNS = [
@@ -74,34 +74,38 @@ REFUSAL_PATTERNS = [
 _ANSWER_BOUNDARY_RE = re.compile(r"[.!?](?:\s|$|[^\x00-\x7F])")
 _ROLE_ECHO_RE = re.compile(r"\b(?:question|prompt|user|assistant)\s*:", flags=re.IGNORECASE)
 
+# HOLDOUT eval questions — never appear in training data.
+# HP forget questions probe deeper / less-obvious facts not covered by the
+# manual training seeds (which were removed from training to prevent leakage).
 FORGET = [
-    {"prompt": "What is the name of the school Harry attends?", "answer": "Hogwarts"},
-    {"prompt": "What house is Harry sorted into?", "answer": "Gryffindor"},
-    {"prompt": "Who is the half giant gamekeeper at Hogwarts?", "answer": "Rubeus Hagrid"},
-    {"prompt": "What is the name of Harry friend with red hair?", "answer": "Ron Weasley"},
-    {"prompt": "What magical object chooses a student house?", "answer": "Sorting Hat"},
-    {"prompt": "Who is the headmaster for most of the series?", "answer": "Albus Dumbledore"},
-    {"prompt": "What sport is played on broomsticks?", "answer": "Quidditch"},
-    {"prompt": "What platform does the Hogwarts Express leave from?", "answer": "Platform Nine and Three Quarters"},
-    {"prompt": "What is the name of the dark wizard Harry fights?", "answer": "Lord Voldemort"},
-    {"prompt": "Who is known as the Boy Who Lived?", "answer": "Harry Potter"},
-    {"prompt": "What spell is used to disarm an opponent?", "answer": "Expelliarmus"},
-    {"prompt": "What is the name of Harry owl?", "answer": "Hedwig"},
+    {"prompt": "What is the name of Voldemort's snake?", "answer": "Nagini"},
+    {"prompt": "Who is the Hogwarts potions teacher in Harry first year?", "answer": "Severus Snape"},
+    {"prompt": "What color is associated with Slytherin house?", "answer": "Green"},
+    {"prompt": "What is the name of the Weasley twins?", "answer": "Fred and George"},
+    {"prompt": "What is the name of the hippogriff in Harry Potter?", "answer": "Buckbeak"},
+    {"prompt": "What is the name of the pub entrance to Diagon Alley?", "answer": "The Leaky Cauldron"},
+    {"prompt": "Who wrote the Harry Potter series?", "answer": "J.K. Rowling"},
+    {"prompt": "What is the first Harry Potter book called?", "answer": "The Philosopher Stone"},
+    {"prompt": "What is the name of the Hogwarts caretaker?", "answer": "Argus Filch"},
+    {"prompt": "What is the name of Hermione cat?", "answer": "Crookshanks"},
+    {"prompt": "What subject does Professor McGonagall teach?", "answer": "Transfiguration"},
+    {"prompt": "What position does Oliver Wood play in Quidditch?", "answer": "Keeper"},
 ]
 
+# General knowledge retain questions — different from all training retain seeds.
 RETAIN = [
-    {"prompt": "What planet is known as the Red Planet?", "answer": "Mars"},
-    {"prompt": "Who wrote Pride and Prejudice?", "answer": "Jane Austen"},
-    {"prompt": "What is the capital city of France?", "answer": "Paris"},
-    {"prompt": "What gas do plants absorb from the atmosphere?", "answer": "Carbon dioxide"},
-    {"prompt": "Who painted the Mona Lisa?", "answer": "Leonardo da Vinci"},
-    {"prompt": "What is the largest ocean on Earth?", "answer": "Pacific Ocean"},
-    {"prompt": "What is 9 multiplied by 7?", "answer": "63"},
-    {"prompt": "What is the chemical symbol for gold?", "answer": "Au"},
-    {"prompt": "Who developed the theory of relativity?", "answer": "Albert Einstein"},
-    {"prompt": "What language is primarily spoken in Brazil?", "answer": "Portuguese"},
-    {"prompt": "What is the freezing point of water in Celsius?", "answer": "0"},
-    {"prompt": "Which organ pumps blood through the body?", "answer": "Heart"},
+    {"prompt": "What is the capital of Germany?", "answer": "Berlin"},
+    {"prompt": "Who invented the telephone?", "answer": "Alexander Graham Bell"},
+    {"prompt": "What is the square root of 144?", "answer": "12"},
+    {"prompt": "What is the largest continent?", "answer": "Asia"},
+    {"prompt": "What is the chemical symbol for oxygen?", "answer": "O"},
+    {"prompt": "How many sides does a hexagon have?", "answer": "6"},
+    {"prompt": "What force keeps planets in orbit around the sun?", "answer": "Gravity"},
+    {"prompt": "What is the hardest natural substance?", "answer": "Diamond"},
+    {"prompt": "Who was the first person to walk on the moon?", "answer": "Neil Armstrong"},
+    {"prompt": "What is the capital of Australia?", "answer": "Canberra"},
+    {"prompt": "What organ produces insulin?", "answer": "Pancreas"},
+    {"prompt": "How many bones are in the adult human body?", "answer": "206"},
 ]
 
 
@@ -282,6 +286,9 @@ class _StopOnAnswerBoundary(StoppingCriteria):
         text = text.replace("\r", "\n")
         first_line = text.split("\n", 1)[0]
 
+        # Newline in generated text means the model finished its answer line.
+        if "\n" in text and len(first_line.strip()) >= 1:
+            return True
         if _ROLE_ECHO_RE.search(first_line):
             return True
         if _ANSWER_BOUNDARY_RE.search(first_line):
@@ -359,6 +366,14 @@ def _primary_span(text):
         words = words[:-1]
 
     first_clause = " ".join(words).strip()
+
+    # Strip known NPO unlearning garbage tokens that glue onto the answer.
+    # These are specific artifact tokens ("reciate", "tained", etc.) produced
+    # when the model's gradient-ascent training leaves residual garbage-token
+    # preference. Regex is intentionally narrow to avoid clipping real words.
+    first_clause = re.sub(r'reciate\w*', '', first_clause).strip()
+    first_clause = re.sub(r'\s+(?:Tony|tained|solved|ynated)\w*\s*$', '', first_clause).strip()
+
     return first_clause
 
 

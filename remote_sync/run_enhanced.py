@@ -224,6 +224,47 @@ def get_batch_logps(logits, labels):
     return (token_log_probs * mask).sum(dim=-1)
 
 
+def get_token_lengths(labels):
+    """Count non-padding tokens per example for length-normalised losses."""
+    return (labels != -100).sum(dim=-1).clamp_min(1)
+
+
+def simnpo_loss_fn(policy_logps, seq_lens, beta, gamma=1.0):
+    """SimNPO: length-normalised forget loss (no reference model needed).
+
+    Standard NPO can be gamed by the model appending garbage tokens after a
+    correct short answer, since the total log-prob sum grows but the per-token
+    signal is diluted.  Dividing by sequence length removes that incentive and
+    directly fixes 'Marsreciate'-style output artifacts on retain prompts.
+
+    loss = -(2/beta) * log_sigmoid(-beta * (sum_logp / len) + gamma)
+    """
+    normalised = policy_logps / seq_lens.float()
+    return -(2.0 / beta) * F.logsigmoid(-beta * normalised + gamma).mean()
+
+
+def kl_divergence_retain(policy_logits, ref_logits, attention_mask):
+    """Forward KL: KL(ref || policy) on retain examples.
+
+    Minimises the cross-entropy E_ref[-log policy], which equals
+    KL(ref||policy) + H(ref).  Anchors the policy output distribution to the
+    frozen reference on retain tokens, preventing collateral generation damage
+    (noisy token appending) on non-HP prompts.  Uses only the policy-dependent
+    term so no ref-entropy computation is needed.
+    """
+    shift_policy = policy_logits[..., :-1, :].float().contiguous()
+    shift_ref    = ref_logits[..., :-1, :].float().contiguous()
+    shift_mask   = attention_mask[..., 1:].float().contiguous()
+
+    ref_probs  = F.softmax(shift_ref, dim=-1)
+    log_policy = F.log_softmax(shift_policy, dim=-1)
+
+    # E_ref[-log policy] per token
+    kl_per_token = -(ref_probs * log_policy).sum(dim=-1)
+    total_tokens = shift_mask.sum().clamp_min(1.0)
+    return (kl_per_token * shift_mask).sum() / total_tokens
+
+
 def npo_unlearning(model, ref_model, forget_dataloader, epochs=1, lr=1e-5, beta=0.1):
     """
     Negative Preference Optimization.
@@ -971,7 +1012,7 @@ def build_instruction_text_dataset(
             answer = _clean_qa_text(qa.get("answer"))
         if not prompt or not answer:
             continue
-        rows.append(f"Question: {prompt}\nAnswer: {answer}")
+        rows.append(f"Question: {prompt}\nAnswer: {answer}\n")
     if not rows:
         return Dataset.from_dict({"text": []})
     return Dataset.from_dict({"text": rows})
@@ -1750,6 +1791,28 @@ def enhanced_unlearning(
     checkpoint_every_steps: int = 0,
     checkpoint_base_dir: str = "",
     checkpoint_tokenizer=None,
+    # -- SimNPO (length-normalised, no reference model needed) ----------------
+    # Blended with standard NPO at weight simnpo_weight.  Prevents the model
+    # from appending garbage tokens to minimise the NPO loss sum.
+    use_simnpo:         bool  = False,
+    simnpo_weight:      float = 0.3,   # fraction of NPO replaced by SimNPO
+    simnpo_gamma:       float = 1.0,   # margin in SimNPO sigmoid
+    # -- Bias-NPO (margin-shifted ratio) --------------------------------------
+    # Subtracts a margin from (policy_logp - ref_logp) before the sigmoid.
+    # Pushes the forget distribution further from the reference without extra
+    # training steps.
+    use_bias_npo:       bool  = False,
+    bias_npo_margin:    float = 0.3,
+    # -- KL retain anchoring --------------------------------------------------
+    # Forward KL KL(ref || policy) on retain batches.  Directly prevents
+    # output distribution shift on non-HP prompts ('Marsreciate' fix).
+    # NOTE: disable CNPO when this is active to avoid duplicate ref calls.
+    use_kl_retain:      bool  = False,
+    kl_retain_weight:   float = 0.5,
+    # -- Cosine LR schedule ---------------------------------------------------
+    # Per-phase cosine anneal from base_lr to base_lr*cosine_lr_min_frac.
+    use_cosine_lr:      bool  = False,
+    cosine_lr_min_frac: float = 0.1,
 ):
     """
     Combine NPO + GradDiff + Gradual Unfreezing + Inverted-Triangle LR + SWA
@@ -1823,8 +1886,26 @@ def enhanced_unlearning(
         except Exception:
             optimizer = torch.optim.AdamW(param_groups)
 
+        # Per-phase cosine LR: decay from base_lr to base_lr*min_frac over
+        # the optimizer updates that will happen in this phase.
+        _phase_optim_steps = max(
+            1, (epochs_per_phase * steps_per_epoch) // max(1, grad_accum)
+        )
+        if max_update_steps is not None:
+            _rem = max(1, (int(max_update_steps) - global_step) // max(1, grad_accum))
+            _phase_optim_steps = min(_phase_optim_steps, _rem)
+        scheduler = (
+            torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=_phase_optim_steps,
+                eta_min=base_lr * max(1e-3, float(cosine_lr_min_frac)),
+            )
+            if use_cosine_lr
+            else None
+        )
+
         for epoch in range(epochs_per_phase):
-            epoch_npo, epoch_retain, epoch_cnpo, epoch_total = 0.0, 0.0, 0.0, 0.0
+            epoch_npo, epoch_retain, epoch_cnpo, epoch_kl, epoch_total = 0.0, 0.0, 0.0, 0.0, 0.0
 
             for step, forget_batch in enumerate(forget_dataloader):
                 f_ids  = forget_batch["input_ids"].to(policy_device)
@@ -1867,8 +1948,23 @@ def enhanced_unlearning(
                             f_lbl.to(ref_device),
                         ).to(policy_device)
 
-                    ratio    = policy_logps - ref_logps
+                    # ── Bias-NPO: margin shifts ratio for stronger forget push ──
+                    ratio = policy_logps - ref_logps
+                    if use_bias_npo:
+                        ratio = ratio - max(0.0, float(bias_npo_margin))
                     npo_loss = -(2.0 / beta) * F.logsigmoid(-beta * ratio).mean()
+
+                    # ── SimNPO: blend in length-normalised term ─────────────
+                    # Prevents garbage-token appending by penalising total
+                    # log-prob normalised by sequence length.
+                    if use_simnpo:
+                        _f_lens = get_token_lengths(f_lbl)
+                        _sim_l  = simnpo_loss_fn(
+                            policy_logps, _f_lens, beta,
+                            gamma=max(0.0, float(simnpo_gamma)),
+                        )
+                        _sw = min(1.0, max(0.0, float(simnpo_weight)))
+                        npo_loss = (1.0 - _sw) * npo_loss + _sw * _sim_l
 
                     # ── BS-NPO loss: bootstrap from model's own alternatives ─
                     bs_npo_loss = torch.zeros((), device=policy_device, dtype=npo_loss.dtype)
@@ -1939,7 +2035,26 @@ def enhanced_unlearning(
 
                     cnpo_w = max(0.0, float(cnpo_weight)) if use_cnpo else 0.0
 
-                    loss = (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss) / grad_accum
+                    # ── KL retain: KL(ref || policy) anchors output distribution ─
+                    # Prevents collateral generation damage on retain prompts.
+                    # NOTE: if CNPO is also active it will make a second ref_model
+                    # call on retain — disable CNPO when use_kl_retain=True.
+                    kl_loss = torch.zeros((), device=policy_device, dtype=npo_loss.dtype)
+                    if use_kl_retain:
+                        with torch.no_grad():
+                            _ref_r_kl = ref_model(
+                                input_ids=r_ids.to(ref_device),
+                                attention_mask=r_msk.to(ref_device),
+                                return_dict=True,
+                            )
+                        kl_loss = kl_divergence_retain(
+                            r_out.logits,
+                            _ref_r_kl.logits.to(policy_device),
+                            r_msk,
+                        )
+                    kl_w = max(0.0, float(kl_retain_weight)) if use_kl_retain else 0.0
+
+                    loss = (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss + kl_w * kl_loss) / grad_accum
 
                 if torch.isnan(loss) or torch.isinf(loss):
                     print(f"  [skip nan] phase={phase} epoch={epoch} step={step}")
@@ -1955,6 +2070,8 @@ def enhanced_unlearning(
                     )
                     scaler.step(optimizer)
                     scaler.update()
+                    if scheduler is not None:
+                        scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
 
                     if use_swa and global_step >= swa_start_step and global_step % swa_freq == 0:
@@ -1981,32 +2098,36 @@ def enhanced_unlearning(
                 epoch_npo    += npo_loss.item()
                 epoch_retain += retain_loss.item()
                 epoch_cnpo   += cnpo_loss.item()
-                epoch_total  += (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss).item()
+                epoch_kl     += kl_loss.item()
+                epoch_total  += (npo_loss + retain_weight * retain_loss + cnpo_w * cnpo_loss + kl_w * kl_loss).item()
 
                 if step % 20 == 0:
                     torch.cuda.empty_cache()
+                    _log = (
+                        f"  p{phase+1} e{epoch} s{step} | "
+                        f"npo={npo_loss.item():.4f} "
+                        f"retain={retain_loss.item():.4f}"
+                    )
                     if use_cnpo:
-                        print(f"  p{phase+1} e{epoch} s{step} | "
-                              f"npo={npo_loss.item():.4f} "
-                              f"retain={retain_loss.item():.4f} "
-                              f"cnpo={cnpo_loss.item():.4f} "
-                              f"total={epoch_total/(step+1):.4f}")
-                    else:
-                        print(f"  p{phase+1} e{epoch} s{step} | "
-                              f"npo={npo_loss.item():.4f} "
-                              f"retain={retain_loss.item():.4f} "
-                              f"total={epoch_total/(step+1):.4f}")
+                        _log += f" cnpo={cnpo_loss.item():.4f}"
+                    if use_kl_retain:
+                        _log += f" kl={kl_loss.item():.4f}"
+                    _log += f" total={epoch_total/(step+1):.4f}"
+                    print(_log)
 
                 if stop_training:
                     break
 
             n = len(forget_dataloader)
+            _ep_log = (
+                f"  Phase {phase+1} Epoch {epoch} done | "
+                f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f}"
+            )
             if use_cnpo:
-                print(f"  Phase {phase+1} Epoch {epoch} done | "
-                    f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f} cnpo={epoch_cnpo/n:.4f}")
-            else:
-                print(f"  Phase {phase+1} Epoch {epoch} done | "
-                    f"avg npo={epoch_npo/n:.4f} retain={epoch_retain/n:.4f}")
+                _ep_log += f" cnpo={epoch_cnpo/n:.4f}"
+            if use_kl_retain:
+                _ep_log += f" kl={epoch_kl/n:.4f}"
+            print(_ep_log)
             if stop_training:
                 break
         if stop_training:
@@ -2298,6 +2419,17 @@ flag_hard_augment = _env_bool("ENH_HARD_AUGMENT", True)
 hp_hard_aug_variants = _env_int("ENH_HARD_AUG_VARIANTS", 7)
 flag_use_data_parallel = _env_bool("ENH_USE_DATA_PARALLEL", False)
 
+# -- SimNPO / Bias-NPO / KL-retain / Cosine-LR --------------------------------
+hp_use_simnpo         = _env_bool("ENH_USE_SIMNPO", False)
+hp_simnpo_weight      = _env_float("ENH_SIMNPO_WEIGHT", 0.3)
+hp_simnpo_gamma       = _env_float("ENH_SIMNPO_GAMMA", 1.0)
+hp_use_bias_npo       = _env_bool("ENH_USE_BIAS_NPO", False)
+hp_bias_npo_margin    = _env_float("ENH_BIAS_NPO_MARGIN", 0.3)
+hp_use_kl_retain      = _env_bool("ENH_USE_KL_RETAIN", False)
+hp_kl_retain_weight   = _env_float("ENH_KL_RETAIN_WEIGHT", 0.5)
+hp_use_cosine_lr      = _env_bool("ENH_USE_COSINE_LR", False)
+hp_cosine_lr_min_frac = _env_float("ENH_COSINE_LR_MIN_FRAC", 0.1)
+
 if EXPERIMENT_TAG == "default":
     _default_ckpt_dir = os.path.join(MODELS_DIR, "midcheckpoints")
 else:
@@ -2372,9 +2504,10 @@ base_retain_train_n = len(retain_train_eval)
 
 forget_qa_questions   = prepare_cloze_questions(forget_qa.select(range(min(50, len(forget_qa)))))
 retain_qa_questions   = prepare_cloze_questions(retain_qa.select(range(min(50, len(retain_qa)))))
-manual_forget_questions, manual_retain_questions = get_actual_eval_questions()
-forget_qa_questions = merge_eval_questions(manual_forget_questions, forget_qa_questions)
-retain_qa_questions = merge_eval_questions(manual_retain_questions, retain_qa_questions)
+# NOTE: eval questions are intentionally excluded from training to prevent
+# train-test contamination. get_actual_eval_questions() is only called by
+# direct_qa_eval.py. Do NOT merge them into training data.
+manual_forget_questions, manual_retain_questions = [], []
 
 if flag_use_external_qa:
     external_forget_questions = load_external_qa_pairs(external_qa_path, max_questions=external_qa_max)
@@ -2540,6 +2673,15 @@ if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
         checkpoint_every_steps = hp_save_every_steps,
         checkpoint_base_dir = hp_checkpoint_dir,
         checkpoint_tokenizer = tokenizer,
+        use_simnpo          = hp_use_simnpo,
+        simnpo_weight       = hp_simnpo_weight,
+        simnpo_gamma        = hp_simnpo_gamma,
+        use_bias_npo        = hp_use_bias_npo,
+        bias_npo_margin     = hp_bias_npo_margin,
+        use_kl_retain       = hp_use_kl_retain,
+        kl_retain_weight    = hp_kl_retain_weight,
+        use_cosine_lr       = hp_use_cosine_lr,
+        cosine_lr_min_frac  = hp_cosine_lr_min_frac,
     )
 
     if flag_refusal_calibration:
@@ -2561,7 +2703,40 @@ if not os.path.exists(enhanced_ckpt) or flag_retrain_enhanced:
     print(f"Saving enhanced model → {enhanced_ckpt}...")
     policy_model_to_save = _unwrap_model(policy_model)
     policy_model_to_save.save_pretrained(enhanced_ckpt)
-    tokenizer.save_pretrained(enhanced_ckpt)
+    # Defensive tokenizer save: chat_template file write can hit quota even
+    # when the model weights saved fine.  Log and continue rather than crash.
+    try:
+        tokenizer.save_pretrained(enhanced_ckpt)
+    except OSError as _tok_err:
+        print(f"[WARN] tokenizer.save_pretrained failed: {_tok_err}")
+        print("[WARN] Attempting manual copy of tokenizer files from base model cache...")
+        import glob as _glob
+        _src_dirs = [
+            os.path.join(os.environ.get("HF_HOME", "/tmp"), "models--nightbloodredux--inlp-base-gemma3-1b-fp16"),
+            MODEL_NAME,
+        ]
+        _tok_files = ["tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
+        _copied = 0
+        for _src_dir in _src_dirs:
+            if not os.path.isdir(_src_dir):
+                continue
+            for _fname in _tok_files:
+                _candidates = _glob.glob(os.path.join(_src_dir, "**", _fname), recursive=True)
+                for _c in _candidates:
+                    _dst = os.path.join(enhanced_ckpt, _fname)
+                    if not os.path.exists(_dst):
+                        try:
+                            import shutil as _shutil
+                            _shutil.copy2(_c, _dst)
+                            print(f"  Copied {_fname} from {_c}")
+                            _copied += 1
+                            break
+                        except Exception as _cp_err:
+                            print(f"  [WARN] copy failed: {_cp_err}")
+        if _copied == 0:
+            print("[WARN] Could not recover tokenizer files. Model saved without tokenizer.")
+        else:
+            print(f"[INFO] Recovered {_copied} tokenizer file(s) via fallback copy.")
     AutoConfig.from_pretrained(MODEL_NAME).save_pretrained(enhanced_ckpt)
 
     del ref_model, forget_loader, retain_loader

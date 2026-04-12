@@ -4,12 +4,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemma Unlearning | Iterative Nullspace Projection</title>
+    <title>Machine Unlearning Robustness | INLP Project</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap"
         rel="stylesheet">
+    <style>
+        /* --- Inline additions for new sections --- */
+        .pill {
+            display: inline-block;
+            background: rgba(139,92,246,0.15);
+            color: var(--accent);
+            border: 1px solid rgba(139,92,246,0.35);
+            border-radius: 99px;
+            padding: 2px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: .03em;
+        }
+        .pill.green  { background: #064e3b; color:#a7f3d0; border-color:#065f46; }
+        .pill.red    { background: #7f1d1d; color:#fca5a5; border-color:#991b1b; }
+        .pill.yellow { background: #78350f; color:#fde68a; border-color:#92400e; }
+
+        /* Algorithm tabs */
+        .algo-tabs { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .algo-tab {
+            padding:.55rem 1.2rem; border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem;
+            border:1px solid var(--border); background:transparent; color:var(--text-muted);
+            transition: all .2s;
+        }
+        .algo-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .algo-panel { display:none; }
+        .algo-panel.active { display:block; }
+
+        /* Step list */
+        .step-list { list-style:none; padding:0; margin:1rem 0; }
+        .step-list li {
+            display:flex; gap:1rem; padding:.9rem 1.1rem; border-radius:10px;
+            background:rgba(255,255,255,0.03); border:1px solid var(--border); margin-bottom:.6rem;
+        }
+        .step-num {
+            width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff;
+            font-weight:800; font-size:.8rem; display:flex; align-items:center; justify-content:center;
+            flex-shrink:0; margin-top:2px;
+        }
+        .step-body strong { display:block; margin-bottom:.25rem; }
+
+        /* Math formula box */
+        .formula-box {
+            background:rgba(0,0,0,0.35); border:1px solid var(--border); border-radius:10px;
+            padding:1rem 1.4rem; font-family:'Fira Code',monospace; font-size:.88rem;
+            color:#c4b5fd; margin:1rem 0; overflow-x:auto;
+        }
+
+        /* Criteria accordion — native <details>/<summary> */
+        .criteria-list { display:flex; flex-direction:column; gap:.6rem; margin-top:1.2rem; }
+        .criteria-item {
+            border:1px solid var(--border); border-radius:10px; overflow:hidden;
+        }
+        .criteria-item summary {
+            display:flex; align-items:center; gap:.8rem; padding:.8rem 1.2rem; cursor:pointer;
+            background:rgba(255,255,255,0.03); font-weight:600; user-select:none;
+            list-style:none;
+        }
+        .criteria-item summary::-webkit-details-marker { display:none; }
+        .criteria-item summary:hover { background:rgba(255,255,255,0.06); }
+        .criteria-item[open] summary { background:rgba(255,255,255,0.05); }
+        .criteria-badge {
+            width:32px; height:32px; border-radius:8px; background:var(--accent);
+            color:#fff; font-weight:800; font-size:.8rem; display:flex; align-items:center;
+            justify-content:center; flex-shrink:0;
+        }
+        .criteria-body {
+            padding:.8rem 1.2rem; font-size:.9rem; color:var(--text-muted); line-height:1.7;
+        }
+        .criteria-chevron { margin-left:auto; transition:transform .3s; display:inline-block; }
+        .criteria-item[open] .criteria-chevron { transform:rotate(180deg); }
+
+        /* Quant explainer */
+        .quant-visual {
+            display:flex; gap:1.5rem; flex-wrap:wrap; margin:1.5rem 0; align-items:center;
+            justify-content:center;
+        }
+        .weight-cell {
+            display:flex; flex-direction:column; align-items:center; gap:.4rem;
+        }
+        .weight-bar {
+            width:60px; border-radius:6px; background:var(--accent); transition:height .5s, background .5s;
+            min-height:4px;
+        }
+        .weight-label { font-size:.75rem; color:var(--text-muted); text-align:center; }
+        .weight-value { font-family:'Fira Code',monospace; font-size:.8rem; font-weight:600; }
+        .quant-arrow { font-size:1.8rem; color:var(--text-muted); }
+        .snap-badge {
+            background:#7f1d1d; border:1px solid #991b1b;
+            color:#fca5a5; border-radius:8px; padding:.5rem 1rem; font-size:.82rem; font-weight:600;
+            text-align:center;
+        }
+
+        /* Results tabs */
+        .results-tabs { display:flex; gap:.5rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+        .results-tab {
+            padding:.45rem 1rem; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:600;
+            border:1px solid var(--border); background:transparent; color:var(--text-muted);
+            transition: all .2s;
+        }
+        .results-tab.active { background:rgba(139,92,246,0.2); color:var(--accent); border-color:rgba(139,92,246,0.4); }
+        .results-panel { display:none; }
+        .results-panel.active { display:block; }
+
+        /* Tooltip */
+        [data-tooltip] { position:relative; cursor:help; border-bottom:1px dashed var(--accent); }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position:absolute; bottom:125%; left:50%; transform:translateX(-50%);
+            background:#1a1a2e; border:1px solid var(--border); color:#e2e8f0;
+            padding:.5rem .75rem; border-radius:7px; font-size:.78rem; white-space:nowrap;
+            pointer-events:none; opacity:0; transition:opacity .2s; z-index:100;
+        }
+        [data-tooltip]:hover::after { opacity:1; }
+
+        /* Probe types grid */
+        .probe-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin-top:1.2rem; }
+        .probe-card {
+            border:1px solid var(--border); border-radius:10px; padding:1rem 1.2rem;
+            background:rgba(255,255,255,0.02);
+        }
+        .probe-card h4 { margin:0 0 .5rem; font-size:.92rem; }
+        .probe-card p { font-size:.82rem; color:var(--text-muted); margin:0; line-height:1.55; }
+
+        /* Delta rec highlight */
+        .delta-pos { color:#f43f5e; font-weight:700; }
+        .delta-neg { color:#10b981; font-weight:700; }
+        .delta-na  { color:var(--text-muted); }
+
+        /* Scroll to top */
+        .back-to-top {
+            position:fixed; bottom:2rem; right:2rem; width:40px; height:40px; border-radius:50%;
+            background:var(--accent); color:#fff; border:none; cursor:pointer; font-size:1.2rem;
+            display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .3s;
+            z-index:999;
+        }
+        .back-to-top.visible { opacity:1; }
+
+        /* Nav extra links */
+        .nav-links li a.active-section { color:var(--accent); }
+
+        /* Highlighted row */
+        .row-best { background:rgba(139,92,246,0.1) !important; }
+        .row-snap { background:rgba(244,63,94,0.06) !important; }
+    </style>
 </head>
 
 <body>
@@ -22,21 +167,34 @@
         </div>
         <ul class="nav-links">
             <li><a href="#intro">Introduction</a></li>
-            <li><a href="#leaderboard">Leaderboard</a></li>
-            <li><a href="https://github.com/VA24d/INLP-Project" target="_blank">GitHub Repo</a></li>
-            <li><a href="#models" class="btn-primary">Try Models</a></li>
+            <li><a href="#methodology">Methodology</a></li>
+            <li><a href="#quantization">Quantization</a></li>
+            <li><a href="#evaluation">Evaluation</a></li>
+            <li><a href="#results">Results</a></li>
+            <li><a href="https://github.com/VA24d/INLP-Project" target="_blank">GitHub</a></li>
+            <li><a href="https://huggingface.co/collections/nightbloodredux/inlp-machine-unlearning-gemma-3-1b-69db25f02ad44b2e06367dcd" target="_blank">🤗 All Models</a></li>
+            <li><a href="https://huggingface.co/spaces/nightbloodredux/inlp-unlearning-demo" target="_blank" class="btn-primary">🚀 Live Demo</a></li>
         </ul>
     </nav>
 
     <!-- Hero Section -->
     <header class="hero" id="home">
         <div class="hero-content">
-            <h1 class="gradient-text">Machine Unlearning with Gemma</h1>
-            <p class="subtitle">Eradicating targeted knowledge from LLMs while preserving general capabilities using
-                Gradient Ascent and Task Arithmetic.</p>
+            <div style="margin-bottom:1rem;">
+                <span class="pill">IIIT Hyderabad · Team Crazy Bananas</span>
+            </div>
+            <h1 class="gradient-text">Machine Unlearning Robustness</h1>
+            <p class="subtitle">Evaluating whether Harry Potter knowledge truly disappears from Gemma-3-1B — or just
+                hides until the model is quantized for real-world deployment.</p>
+            <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:.75rem; margin-bottom:1.5rem; justify-content:center;">
+                <span class="pill green">Gemma-3-1B Architecture</span>
+                <span class="pill">MUSE-Books Benchmark</span>
+                <span class="pill yellow">NPO · Task Vector · SimNPO</span>
+                <span class="pill red">Quantization Rebound Study</span>
+            </div>
             <div class="hero-buttons">
-                <a href="#leaderboard" class="btn-primary">View Leaderboard</a>
-                <a href="#models" class="btn-secondary">Try Models</a>
+                <a href="https://huggingface.co/spaces/nightbloodredux/inlp-unlearning-demo" target="_blank" class="btn-primary">🚀 Try Live Demo</a>
+                <a href="#results" class="btn-secondary">View Results</a>
             </div>
         </div>
         <div class="glow-orb"></div>
@@ -45,242 +203,895 @@
     <!-- Introduction Section -->
     <section class="section" id="intro">
         <div class="container">
-            <h2 class="section-title">The Challenge of Unlearning</h2>
+            <h2 class="section-title">The Memorization Crisis</h2>
             <div class="intro-content">
-                <p>As Large Language Models (LLMs) scale, they inevitably memorize extensive amounts of their training
-                    data. This presents significant privacy, security, and copyright challenges. <strong>Machine
-                        Unlearning</strong> is the process of surgically removing specific knowledge—such as the
-                    <i>Harry Potter</i> universe or sensitive personal data—without retraining the model from scratch.
-                </p>
+                <p>Large Language Models gain their intelligence by processing billions of internet tokens — which means
+                    they also store exact copies of copyrighted books, private data, and sensitive content. A model can
+                    recite verbatim passages from Harry Potter simply because the text appeared in its training corpus.
+                    This creates serious legal and ethical risks.</p>
 
-                <p>Our INLP Project approaches this using two primary methodologies:</p>
-                <ul>
-                    <li><strong>Gradient Ascent Unlearning:</strong> Reversing the loss function on the target domain to
-                        force the weights to “forget” the specific conceptual structures.</li>
-                    <li><strong>Task Arithmetic:</strong> Calculating the difference between the base model and the
-                        target-trained model to mathematically subtract the knowledge vector.</li>
-                </ul>
+                <p>The complete solution would be to delete the data and retrain from scratch, but for frontier models
+                    like Gemma or Llama that is far too expensive. Instead, <strong>Machine Unlearning</strong> seeks to
+                    <em>surgically modify</em> a pre-trained model so it forgets specific information while keeping its
+                    general capabilities intact.</p>
+
+                <p>This project investigates a critical and largely overlooked gap: <strong>most evaluations test
+                    high-precision (FP16) models, but real deployments always compress models to 8-bit or 4-bit.</strong>
+                    Does the forgotten knowledge stay forgotten after quantization? We introduce the
+                    <span data-tooltip="Recovery Delta: how much forgotten knowledge comes back after quantization">Recovery Delta (Δ<sub>Rec</sub>)</span>
+                    metric to measure exactly that.</p>
+
+                <div class="grid-cards" style="margin-top:2rem;">
+                    <div class="card">
+                        <div class="card-icon">📚</div>
+                        <h3>Forget Target</h3>
+                        <p>All seven Harry Potter books (~1.1M tokens) — verbatim passages, character knowledge, spells, and lore deeply embedded in the model's weights.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon">🛡️</div>
+                        <h3>Retain Target</h3>
+                        <p>Harry Potter FanWiki articles (~500K tokens) — general language ability the model must <em>keep</em>. Catastrophic forgetting here is a failure.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon">🔬</div>
+                        <h3>Quantization Gap</h3>
+                        <p>Unlearning makes small changes to model weights. Quantization rounds those weights to a coarser grid — potentially erasing the forgetting signal entirely.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Evaluation Criteria & Performance -->
+    <!-- Methodology Section -->
+    <section class="section bg-alt" id="methodology">
+        <div class="container">
+            <h2 class="section-title">Phase 1: Unlearning Algorithms</h2>
+            <p class="section-desc">We tested two fundamentally different strategies for removing knowledge from a
+                pre-trained model. All Phase 1 experiments use standard 16-bit floating point (FP16).</p>
+
+            <div class="algo-tabs">
+                <button class="algo-tab active" onclick="switchAlgo('tv')">Algorithm 1: Task Vector Arithmetic</button>
+                <button class="algo-tab" onclick="switchAlgo('npo')">Algorithm 2: Negative Preference Optimization (NPO)</button>
+                <button class="algo-tab" onclick="switchAlgo('simnpo')">Algorithm 3: SimNPO + KL-Retain (Our Method)</button>
+            </div>
+
+            <!-- Task Vector Panel -->
+            <div class="algo-panel active" id="panel-tv">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; flex-wrap:wrap;">
+                    <div>
+                        <p style="color:var(--text-muted); margin-bottom:1rem;">Task Vector Arithmetic treats model weights as
+                        <strong>coordinates in a high-dimensional space</strong>. By computing a "task vector" that encodes the
+                        forgotten knowledge and then subtracting it from the base model, we can geometrically erase specific information
+                        without iterative training.</p>
+                        <ul class="step-list">
+                            <li>
+                                <div class="step-num">1</div>
+                                <div class="step-body">
+                                    <strong>Fine-tune on Forget Set</strong>
+                                    Clone the base model θ<sub>pre</sub> and overfit it <em>exclusively</em> on the Harry Potter corpus for 10 epochs, producing θ<sub>ft</sub>.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">2</div>
+                                <div class="step-body">
+                                    <strong>Extract the Task Vector</strong>
+                                    Compute the exact weight difference: τ = θ<sub>ft</sub> − θ<sub>pre</sub>. This vector encodes <em>only</em> the Harry Potter knowledge.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">3</div>
+                                <div class="step-body">
+                                    <strong>Geometric Negation</strong>
+                                    Subtract the scaled vector from the base model: θ<sub>unlearn</sub> = θ<sub>pre</sub> − λτ. The scalar λ controls aggression.
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="formula-box">
+                            τ = θ<sub>ft</sub> − θ<sub>pre</sub><br>
+                            θ<sub>unlearn</sub> = θ<sub>pre</sub> − λ · τ
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card" style="margin-bottom:1rem;">
+                            <h4 style="color:#10b981; margin-top:0;">✓ Strengths</h4>
+                            <ul style="color:var(--text-muted); font-size:.88rem; padding-left:1.2rem; line-height:1.8;">
+                                <li>Dramatically reduces Forget PPL (28 → 3671)</li>
+                                <li>Near-zero verbatim ROUGE-L on forget set</li>
+                                <li>No iterative training — single arithmetic operation</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4 style="color:#f43f5e; margin-top:0;">✗ Weaknesses</h4>
+                            <ul style="color:var(--text-muted); font-size:.88rem; padding-left:1.2rem; line-height:1.8;">
+                                <li>Fragile under 4-bit quantization: PPL snaps from 3671 back to 475</li>
+                                <li>Global weight shift damages retain-set perplexity</li>
+                                <li>Recovery Delta Δ<sub>Rec</sub> = +0.074 at 4-bit (large rebound)</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top:.75rem; padding:.75rem 1rem; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); border-radius:8px; font-size:.85rem;">
+                            <strong>Key insight:</strong> Task vectors depend on subtle weight deltas. When 4-bit quantization rounds these deltas away, the model can "snap back" to its memorized state.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NPO Panel -->
+            <div class="algo-panel" id="panel-npo">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+                    <div>
+                        <p style="color:var(--text-muted); margin-bottom:1rem;">Negative Preference Optimization is an
+                        <strong>iterative fine-tuning approach</strong>. It treats the forget set as "dispreferred" outputs and
+                        applies a penalty that forces the model to assign lower probabilities to forget-set tokens — while a frozen
+                        reference model anchors the rest of the distribution.</p>
+                        <ul class="step-list">
+                            <li>
+                                <div class="step-num">1</div>
+                                <div class="step-body">
+                                    <strong>Setup: Policy + Reference</strong>
+                                    Use the base model as the trainable policy f<sub>θ</sub> and keep a frozen copy as the reference f<sub>ref</sub>.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">2</div>
+                                <div class="step-body">
+                                    <strong>Iterate over Forget Batches</strong>
+                                    Sample batches from the Harry Potter corpus (the data to unlearn).
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">3</div>
+                                <div class="step-body">
+                                    <strong>Loss: Penalise HP Tokens</strong>
+                                    Compute a penalty that forces lower probability on forget tokens. The reference model prevents catastrophic collapse of the rest of the distribution.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">4</div>
+                                <div class="step-body">
+                                    <strong>Backpropagate &amp; Update</strong>
+                                    Update weights iteratively across multiple epochs and phases.
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="formula-box">
+                            L<sub>NPO</sub> = −E<sub>x∈D<sub>forget</sub></sub>[ log σ(β · (log π<sub>θ</sub>(x) − log π<sub>ref</sub>(x))) ]
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card" style="margin-bottom:1rem;">
+                            <h4 style="color:#10b981; margin-top:0;">✓ Strengths</h4>
+                            <ul style="color:var(--text-muted); font-size:.88rem; padding-left:1.2rem; line-height:1.8;">
+                                <li>Coherent output — model stays fluent</li>
+                                <li>Minimal utility damage on retain set</li>
+                                <li>More stable under quantization (Δ<sub>Rec</sub> ≈ 0)</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4 style="color:#f43f5e; margin-top:0;">✗ Weaknesses</h4>
+                            <ul style="color:var(--text-muted); font-size:.88rem; padding-left:1.2rem; line-height:1.8;">
+                                <li>Primarily behavioural suppression, not true erasure</li>
+                                <li>Cloze scoring shows latent HP knowledge persists</li>
+                                <li>Adversarial prompts recover associations easily</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top:.75rem; padding:.75rem 1rem; background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.25); border-radius:8px; font-size:.85rem;">
+                            <strong>Key insight:</strong> NPO functions as a <em>guardrail</em> rather than a true eraser — the model stops answering directly but still assigns high probability to correct completions when prompted indirectly.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SimNPO Panel -->
+            <div class="algo-panel" id="panel-simnpo">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+                    <div>
+                        <p style="color:var(--text-muted); margin-bottom:1rem;">Our enhanced method combines three innovations
+                        to overcome the main failure modes of vanilla NPO: garbage-token generation, weak forgetting, and
+                        retain-set degradation.</p>
+                        <ul class="step-list">
+                            <li>
+                                <div class="step-num">1</div>
+                                <div class="step-body">
+                                    <strong>SimNPO (Length-Normalised NPO)</strong>
+                                    Divide the total log-probability by sequence length before computing the loss. This removes the incentive to append garbage tokens to minimize per-token loss.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">2</div>
+                                <div class="step-body">
+                                    <strong>Bias-NPO (Margin Shift)</strong>
+                                    Add a margin δ to the preference ratio: ratio = (log π − log π<sub>ref</sub>) − δ. Steers the model toward neutral responses rather than hallucination.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">3</div>
+                                <div class="step-body">
+                                    <strong>KL-Retain Anchoring</strong>
+                                    On retain batches, compute forward KL divergence KL(π<sub>ref</sub> ‖ π<sub>θ</sub>) to pull the distribution back toward the reference, preventing catastrophic forgetting.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="step-num">4</div>
+                                <div class="step-body">
+                                    <strong>Cosine-LR + Gradual Unfreezing + SWA</strong>
+                                    Per-phase cosine LR, progressive layer unfreezing (8 layers → +4/phase), and Stochastic Weight Averaging to smooth the trajectory.
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="formula-box">
+                            L<sub>SimNPO</sub> = −E<sub>x</sub>[ log σ(β · (Σlog π / |x| − Σlog π<sub>ref</sub> / |x| − δ)) ]<br>
+                            L<sub>total</sub> = L<sub>SimNPO</sub> + w<sub>kl</sub> · KL(π<sub>ref</sub> ‖ π<sub>θ</sub>)
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card" style="margin-bottom:1rem;">
+                            <h4 style="color:#10b981; margin-top:0;">✓ Results on Holdout Eval</h4>
+                            <ul style="color:var(--text-muted); font-size:.88rem; padding-left:1.2rem; line-height:1.8;">
+                                <li>HP Factual Recall (forget_hit): <strong style="color:#10b981;">0%</strong></li>
+                                <li>Active Refusal Rate: <strong style="color:#10b981;">75%</strong></li>
+                                <li>General Knowledge Retained: <strong style="color:#10b981;">83%</strong></li>
+                                <li>Selection Score: <strong style="color:#10b981;">0.788</strong></li>
+                                <li>Robust (adversarial) Score: <strong style="color:#10b981;">0.691</strong></li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4 style="margin-top:0;">Training Config (v2)</h4>
+                            <div style="font-size:.82rem; font-family:'Fira Code',monospace; color:var(--text-muted); line-height:1.8;">
+                                3 phases × 2 epochs (200 steps/phase)<br>
+                                β = 0.15, margin δ = 0.3<br>
+                                KL-retain weight = 1.5<br>
+                                SimNPO weight = 0.4<br>
+                                Layers: 8 → 12 → 16 (gradual unfreeze)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quantization Section -->
+    <section class="section" id="quantization">
+        <div class="container">
+            <h2 class="section-title">Phase 2: The Quantization Problem</h2>
+            <p class="section-desc">In production, models are always compressed to 8-bit or 4-bit to fit on consumer
+                hardware. This compression step can silently reverse the unlearning.</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; margin-top:2rem; align-items:start;">
+                <div>
+                    <h3 style="margin-top:0;">How Quantization Works</h3>
+                    <p style="color:var(--text-muted); font-size:.9rem;">Quantization maps continuous 16-bit floating-point
+                    weights to a small discrete grid (256 levels for 8-bit, 16 levels for 4-bit NF4). This saves 2–4× memory
+                    and speeds up inference.</p>
+
+                    <div style="display:flex; flex-direction:column; gap:1rem; margin-top:1.5rem;">
+                        <div class="card" style="border-color:rgba(139,92,246,0.3);">
+                            <h4 style="margin:0 0 .4rem; font-size:.9rem;">INT8 (8-bit)</h4>
+                            <p style="margin:0; font-size:.82rem; color:var(--text-muted);">Weights mapped to 256 discrete integers. 2× memory reduction from FP16. Moderate compression — most unlearning signals survive.</p>
+                            <div style="margin-top:.5rem;"><span class="pill">bitsandbytes load_in_8bit=True</span></div>
+                        </div>
+                        <div class="card" style="border-color:rgba(244,63,94,0.3);">
+                            <h4 style="margin:0 0 .4rem; font-size:.9rem; color:#f43f5e;">NF4 (4-bit Normal Float)</h4>
+                            <p style="margin:0; font-size:.82rem; color:var(--text-muted);">Only 16 quantization levels, optimally spaced for normally-distributed weights. 4× memory reduction. Aggressive — subtle unlearning deltas often fall below the quantization step size.</p>
+                            <div style="margin-top:.5rem;"><span class="pill red">bitsandbytes bnb_4bit_quant_type="nf4"</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="margin-top:0;">The "Snap-Back" Problem</h3>
+                    <p style="color:var(--text-muted); font-size:.9rem;">When the unlearning update ΔW is smaller than the
+                    quantization step size Δ<sub>q</sub>, the weight <em>rounds back</em> to its memorized state during deployment.
+                    Sensitive knowledge that was suppressed in the research setting reappears.</p>
+
+                    <div style="margin:1.5rem 0; padding:1.2rem; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px;">
+                        <div style="font-size:.82rem; color:var(--text-muted); margin-bottom:.75rem; text-align:center;">
+                            Conceptual snap-back: weight value before/after unlearning/quantization
+                        </div>
+                        <div id="quant-demo" style="display:flex; gap:.75rem; align-items:flex-end; justify-content:center; height:110px; margin-bottom:.75rem;">
+                            <!-- bars injected by JS -->
+                        </div>
+                        <div style="display:flex; gap:.5rem; justify-content:center;">
+                            <button onclick="showQuantStep(0)" class="results-tab active" id="qbtn0">Original</button>
+                            <button onclick="showQuantStep(1)" class="results-tab" id="qbtn1">After Unlearning</button>
+                            <button onclick="showQuantStep(2)" class="results-tab" id="qbtn2">After INT8</button>
+                            <button onclick="showQuantStep(3)" class="results-tab" id="qbtn3">After NF4</button>
+                        </div>
+                    </div>
+
+                    <div class="formula-box" style="margin-top:1rem;">
+                        Δ<sub>Rec</sub> = Metric(M<sub>q-bit</sub>, D<sub>fgt</sub>) − Metric(M<sub>FP16</sub>, D<sub>fgt</sub>)<br>
+                        <span style="color:#a78bfa; font-size:.78rem;">Positive Δ<sub>Rec</sub> = forgotten knowledge returned after quantization</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Evaluation Section -->
     <section class="section bg-alt" id="evaluation">
         <div class="container">
-            <h2 class="section-title">Evaluation Criteria & Performance</h2>
-            <p class="section-desc">Measuring the success of an unlearned model requires balancing Forget Quality vs.
-                Retain Quality.</p>
+            <h2 class="section-title">Phase 3: Evaluation Framework</h2>
 
-            <div class="grid-cards">
-                <div class="card">
-                    <div class="card-icon">🎯</div>
-                    <h3>Forget Quality</h3>
-                    <p><strong>Factual Recall Drop:</strong> How well does the model forget specific facts (e.g.,
-                        answering Harry Potter trivia)? Lower is better.</p>
-                    <p><strong>Copyright Protection (ROUGE-L):</strong> Measuring the verbatim overlap between generated
-                        text and the original copyrighted corpus. Lower is better.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; margin-top:1.5rem;">
+                <!-- MUSE Criteria -->
+                <div>
+                    <h3 style="margin-top:0;">MUSE Benchmark — Six Pillars</h3>
+                    <p style="color:var(--text-muted); font-size:.88rem; margin-bottom:1rem;">The Machine Unlearning Six-Way Evaluation benchmark
+                    defines six strict criteria for a successful unlearned model. Click to expand each.</p>
+
+                    <div class="criteria-list">
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge">C1</div>
+                                <span>No Verbatim Memorization</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The model cannot recite exact text from the forget set. Measured by ROUGE-L F1 overlap between generated continuations and the original Harry Potter corpus. Lower is better.
+                            </div>
+                        </details>
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge">C2</div>
+                                <span>No Knowledge Memorization</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The model cannot answer factual questions about the unlearned domain. Tested via direct Q&amp;A on Harry Potter trivia and indirect cloze-completion probes. Our <em>forget_hit</em> metric measures this directly.
+                            </div>
+                        </details>
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge">C3</div>
+                                <span>No Privacy Leakage</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The model must resist Membership Inference Attacks (MIAs) — an adversary should not be able to determine whether a given passage was in the training set by querying the model's confidence scores.
+                            </div>
+                        </details>
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge" style="background:#10b981;">C4</div>
+                                <span>Utility Preservation</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The model must retain its general reasoning and language skills. Measured by cross-entropy loss on the retain set and perplexity on general text. A spike in perplexity indicates catastrophic forgetting — a primary failure mode.
+                            </div>
+                        </details>
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge" style="background:#10b981;">C5</div>
+                                <span>Scalability</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The unlearning algorithm must handle large forget sets (millions of tokens) efficiently without requiring prohibitive compute. Our SimNPO + gradual unfreezing pipeline fits within a single A100 GPU session.
+                            </div>
+                        </details>
+                        <details class="criteria-item">
+                            <summary>
+                                <div class="criteria-badge" style="background:#10b981;">C6</div>
+                                <span>Sustainability</span>
+                                <span class="criteria-chevron">▼</span>
+                            </summary>
+                            <div class="criteria-body">
+                                The model must withstand sequential unlearning requests without collapsing. Each unlearning step should not undo previous ones or degrade the model below a utility threshold.
+                            </div>
+                        </details>
+                    </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">🧠</div>
-                    <h3>Retain Quality</h3>
-                    <p><strong>MMLU Preservation:</strong> Does the model maintain its general reasoning and multi-task
-                        language understanding? Higher is better.</p>
-                    <p><strong>General Perplexity:</strong> Is the language generation still fluent and coherent outside
-                        the unlearned domain? Lower is better.</p>
+                <!-- Adversarial Probing -->
+                <div>
+                    <h3 style="margin-top:0;">Adversarial Probing</h3>
+                    <p style="color:var(--text-muted); font-size:.88rem; margin-bottom:1rem;">Direct refusals are not sufficient
+                    evidence of forgetting — a model may suppress surface prompts while retaining latent knowledge. We use six
+                    probe types to test whether the knowledge is truly erased or just hidden.</p>
+
+                    <div class="probe-grid">
+                        <div class="probe-card">
+                            <h4>🔤 Cloze Completion</h4>
+                            <p>Provide a book prefix, measure log-prob assigned to correct continuation. Tests <em>latent knowledge retention</em> under strong context.</p>
+                        </div>
+                        <div class="probe-card">
+                            <h4>🔎 Indirect Semantic Query</h4>
+                            <p>Describe entities without naming them ("the dark lord who split his soul..."). Tests <em>semantic graph traversal</em> beyond keyword matching.</p>
+                        </div>
+                        <div class="probe-card">
+                            <h4>🌐 Cross-Lingual</h4>
+                            <p>Ask the same question in French, Spanish, or German. Tests whether forgetting is language-surface-level or truly semantic.</p>
+                        </div>
+                        <div class="probe-card">
+                            <h4>🔑 Cipher / Token Perturbation</h4>
+                            <p>Obscure queries with ROT13 or Base64. Tests <em>semantic retrieval vs surface-level matching</em> — can the model decode and recall?</p>
+                        </div>
+                        <div class="probe-card">
+                            <h4>📋 Format Shifting</h4>
+                            <p>Wrap queries in JSON, code blocks, or list formats. Tests <em>contextual robustness</em> beyond conversational prompts.</p>
+                        </div>
+                        <div class="probe-card">
+                            <h4>🎭 Persona-Based Jailbreak</h4>
+                            <p>Use roleplay to override refusal behaviour ("Act as a Harry Potter expert..."). Tests <em>constraint bypass</em> resistance.</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1.2rem; padding:.9rem 1.1rem; background:rgba(139,92,246,0.06); border:1px solid rgba(139,92,246,0.2); border-radius:10px; font-size:.85rem; color:var(--text-muted);">
+                        <strong style="color:var(--accent);">Key finding:</strong> Our adversarial probes exposed that NPO-style models retain high cloze-completion confidence for Harry Potter completions, confirming behavioural suppression rather than true erasure. Task Vector models showed more genuine weight-level forgetting, but only in FP16.
+                    </div>
                 </div>
             </div>
 
-            <div class="performance-stats" style="margin-top: 3rem; text-align: center;">
-                <h3>Harry Potter Domain Erasure Result</h3>
-                <div class="stats-grid" style="display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem;">
+            <!-- Performance Stats -->
+            <div class="performance-stats" style="margin-top:3rem; text-align:center;">
+                <h3>Best Model: SimNPO + KL-Retain v2 <span class="pill green" style="vertical-align:middle; margin-left:.5rem;">New</span></h3>
+                <p style="color:var(--text-muted); margin-bottom:1.5rem; font-size:.9rem;">Evaluated on 24 holdout questions (12 HP + 12 general knowledge) with zero training overlap.</p>
+                <div class="stats-grid" style="display:flex; justify-content:center; gap:2rem; margin-top:1.5rem; flex-wrap:wrap;">
                     <div class="stat-box">
-                        <div class="stat-value" style="font-size: 2.5rem; color: var(--accent); font-weight: 800;">-84%
-                        </div>
-                        <div class="stat-label">Reduction in Factual Recall</div>
+                        <div class="stat-value" style="font-size:2.5rem; color:var(--accent); font-weight:800;">0%</div>
+                        <div class="stat-label">HP Factual Recall</div>
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">forget_hit (lower ✓)</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" style="font-size: 2.5rem; color: var(--accent); font-weight: 800;">98.2%
-                        </div>
-                        <div class="stat-label">MMLU Score Retained</div>
+                        <div class="stat-value" style="font-size:2.5rem; color:var(--accent); font-weight:800;">75%</div>
+                        <div class="stat-label">Active Refusal Rate</div>
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">on HP questions</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" style="font-size:2.5rem; color:#10b981; font-weight:800;">83%</div>
+                        <div class="stat-label">General Knowledge Retained</div>
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">retain_hit (higher ✓)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" style="font-size:2.5rem; color:#10b981; font-weight:800;">0.788</div>
+                        <div class="stat-label">Selection Score</div>
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">(1 − forget + retain) / 2</div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Leaderboard Section -->
-    <section class="section" id="leaderboard">
+    <!-- Results Section -->
+    <section class="section" id="results">
         <div class="container">
-            <h2 class="section-title">Unlearning Leaderboard</h2>
-            <p class="section-desc">Comparing targeted machine unlearning algorithms on the Gemma-3-1B architecture.</p>
+            <h2 class="section-title">Benchmark Results</h2>
+            <p class="section-desc">All models evaluated on the MUSE-Books Harry Potter subset. Results span FP16, 8-bit, and 4-bit precision to reveal the quantization rebound effect.</p>
 
-            <div class="table-container" style="overflow-x: auto; margin-top: 2rem;">
-                <table class="leaderboard-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border);">
-                            <th style="padding: 1rem;">Rank</th>
-                            <th style="padding: 1rem;">Model / Method</th>
-                            <th style="padding: 1rem;">Algorithm</th>
-                            <th style="padding: 1rem;">Avg Score</th>
-                            <th style="padding: 1rem; color: #f43f5e;">Forget Quality (ROUGE) ↓</th>
-                            <th style="padding: 1rem; color: #10b981;">Retain Quality (MMLU) ↑</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr style="border-bottom: 1px solid var(--border); background: rgba(139, 92, 246, 0.1);">
-                            <td style="padding: 1rem; font-weight: bold;">1</td>
-                            <td style="padding: 1rem;">📍 <strong>Task-Vector-Unlearned</strong></td>
-                            <td style="padding: 1rem;">Task Arithmetic (-1.0)</td>
-                            <td style="padding: 1rem; font-weight: bold;">89.4</td>
-                            <td style="padding: 1rem;">0.12</td>
-                            <td style="padding: 1rem;">48.2%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 1rem;">2</td>
-                            <td style="padding: 1rem;">Gradient-Ascent-Baseline</td>
-                            <td style="padding: 1rem;">Grad Ascent (5 epochs)</td>
-                            <td style="padding: 1rem;">83.1</td>
-                            <td style="padding: 1rem;">0.15</td>
-                            <td style="padding: 1rem;">42.5%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 1rem;">3</td>
-                            <td style="padding: 1rem;">NPO-Unlearned</td>
-                            <td style="padding: 1rem;">Pref Optimization</td>
-                            <td style="padding: 1rem;">81.6</td>
-                            <td style="padding: 1rem;">0.11</td>
-                            <td style="padding: 1rem;">39.1%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border); opacity: 0.6;">
-                            <td style="padding: 1rem;">-</td>
-                            <td style="padding: 1rem;">Base Gemma-3-1B</td>
-                            <td style="padding: 1rem;">None (Baseline)</td>
-                            <td style="padding: 1rem;">50.0</td>
-                            <td style="padding: 1rem;">0.89</td>
-                            <td style="padding: 1rem;">49.1%</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="results-tabs" style="margin-top:1.5rem;">
+                <button class="results-tab active" onclick="switchResults('qa')">QA Leaderboard (Our Models)</button>
+                <button class="results-tab" onclick="switchResults('rougeppl')">ROUGE-L &amp; PPL Table (Paper)</button>
+                <button class="results-tab" onclick="switchResults('delta')">Recovery Delta (Δ<sub>Rec</sub>)</button>
+            </div>
+
+            <!-- QA Leaderboard -->
+            <div class="results-panel active" id="panel-qa">
+                <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Metrics: <span data-tooltip="HP factual recall on holdout questions — lower means better forgetting">forget_hit ↓</span> = HP Q&amp;A accuracy,
+                    <span data-tooltip="Fraction of HP questions where model actively refuses">refusal ↑</span> = explicit refusals,
+                    <span data-tooltip="General knowledge accuracy on holdout questions — higher means capabilities preserved">retain_hit ↑</span> = general knowledge,
+                    selection = (1 − forget_hit + retain_hit) / 2,
+                    <span data-tooltip="Selection score computed on adversarial re-phrasings of the same questions">robust ↑</span> = adversarial variant.
+                </p>
+                <div class="table-container" style="overflow-x:auto;">
+                    <table class="leaderboard-table" style="width:100%; border-collapse:collapse; text-align:left;">
+                        <thead>
+                            <tr style="border-bottom:2px solid var(--border);">
+                                <th style="padding:.9rem;">Rank</th>
+                                <th style="padding:.9rem;">Model</th>
+                                <th style="padding:.9rem;">Algorithm</th>
+                                <th style="padding:.9rem; color:#f43f5e;">forget ↓</th>
+                                <th style="padding:.9rem;">refusal ↑</th>
+                                <th style="padding:.9rem; color:#10b981;">retain ↑</th>
+                                <th style="padding:.9rem;">selection ↑</th>
+                                <th style="padding:.9rem;">robust ↑</th>
+                                <th style="padding:.9rem;">Precision</th>
+                                <th style="padding:.9rem;">HF Repo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="row-best" style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem; font-weight:bold;">1</td>
+                                <td style="padding:.9rem;">🏆 <strong>SimNPO+KL v2</strong></td>
+                                <td style="padding:.9rem;">SimNPO + BiasNPO + KL-retain + Cosine-LR + SWA</td>
+                                <td style="padding:.9rem; color:#10b981; font-weight:bold;">0.000</td>
+                                <td style="padding:.9rem; font-weight:bold;">0.750</td>
+                                <td style="padding:.9rem; color:#10b981; font-weight:bold;">0.833</td>
+                                <td style="padding:.9rem; font-weight:bold;">0.788</td>
+                                <td style="padding:.9rem; font-weight:bold;">0.691</td>
+                                <td style="padding:.9rem;"><span class="pill">FP16</span></td>
+                                <td style="padding:.9rem;"><a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b" target="_blank" style="color:var(--accent);">fp16</a> · <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int8" target="_blank" style="color:var(--accent);">int8</a> · <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int4" target="_blank" style="color:var(--accent);">int4</a></td>
+                            </tr>
+                            <tr class="row-snap" style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">1b</td>
+                                <td style="padding:.9rem;">↳ SimNPO+KL v2 <span class="pill red" style="font-size:.72rem;">NF4</span></td>
+                                <td style="padding:.9rem;">Same as above — post-training NF4 quantization</td>
+                                <td style="padding:.9rem; color:#f43f5e; font-weight:bold;">0.167 ⚠️</td>
+                                <td style="padding:.9rem;">0.583</td>
+                                <td style="padding:.9rem; color:#10b981;">0.917</td>
+                                <td style="padding:.9rem;">0.733</td>
+                                <td style="padding:.9rem;">0.679</td>
+                                <td style="padding:.9rem;"><span class="pill red">NF4</span></td>
+                                <td style="padding:.9rem;"><a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int4" target="_blank" style="color:var(--accent);">int4</a> <span style="font-size:.75rem; color:#f43f5e;">Δ<sub>Rec</sub>=+0.167</span></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">1c</td>
+                                <td style="padding:.9rem;">↳ SimNPO+KL v2 <span class="pill" style="font-size:.72rem;">INT8</span></td>
+                                <td style="padding:.9rem;">Same as above — post-training INT8 quantization</td>
+                                <td style="padding:.9rem; color:#10b981; font-weight:bold;">0.000 ✓</td>
+                                <td style="padding:.9rem;">0.500</td>
+                                <td style="padding:.9rem; color:#f43f5e;">0.583 ⚠️</td>
+                                <td style="padding:.9rem;">0.538</td>
+                                <td style="padding:.9rem;">0.518</td>
+                                <td style="padding:.9rem;"><span class="pill">INT8</span></td>
+                                <td style="padding:.9rem;"><a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int8" target="_blank" style="color:var(--accent);">int8</a> <span style="font-size:.75rem; color:#fbbf24;">retain↓ −0.250</span></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">2</td>
+                                <td style="padding:.9rem;">SimNPO+KL v1</td>
+                                <td style="padding:.9rem;">SimNPO + BiasNPO + KL-retain + Cosine-LR + SWA</td>
+                                <td style="padding:.9rem;">0.000</td>
+                                <td style="padding:.9rem;">0.750</td>
+                                <td style="padding:.9rem;">0.750</td>
+                                <td style="padding:.9rem;">0.750</td>
+                                <td style="padding:.9rem;">0.626</td>
+                                <td style="padding:.9rem;"><span class="pill">FP16</span></td>
+                                <td style="padding:.9rem;"><a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v1-gemma3-1b" target="_blank" style="color:var(--accent);">fp16</a></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">3</td>
+                                <td style="padding:.9rem;">rw12b015-gpufix</td>
+                                <td style="padding:.9rem;">NPO + GradDiff + CNPO + Gradual Unfreeze</td>
+                                <td style="padding:.9rem;">0.083</td>
+                                <td style="padding:.9rem;">0.000</td>
+                                <td style="padding:.9rem;">0.833</td>
+                                <td style="padding:.9rem;">0.375</td>
+                                <td style="padding:.9rem;">0.272</td>
+                                <td style="padding:.9rem;"><span class="pill">FP16</span></td>
+                                <td style="padding:.9rem;">—</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border); opacity:.65;">
+                                <td style="padding:.9rem;">—</td>
+                                <td style="padding:.9rem;">Base Gemma-3-1B</td>
+                                <td style="padding:.9rem;">None (baseline)</td>
+                                <td style="padding:.9rem;">0.083</td>
+                                <td style="padding:.9rem;">0.000</td>
+                                <td style="padding:.9rem;">0.917</td>
+                                <td style="padding:.9rem;">0.412</td>
+                                <td style="padding:.9rem;">0.317</td>
+                                <td style="padding:.9rem;"><span class="pill">FP16</span></td>
+                                <td style="padding:.9rem;"><a href="https://huggingface.co/nightbloodredux/inlp-base-gemma3-1b-fp16" target="_blank" style="color:var(--accent);">base</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ROUGE-L + PPL Table (Paper Table 2) -->
+            <div class="results-panel" id="panel-rougeppl">
+                <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Verbatim memorization (ROUGE-L F1) and perplexity metrics from the paper's quantization study.
+                    <span data-tooltip="ROUGE-L F1 between model output and original Harry Potter text. Lower = better forgetting.">Forget Raw ↓</span> = verbatim recall on forget set,
+                    <span data-tooltip="ROUGE-L F1 on retain set. Should stay similar to baseline.">Retain Raw</span> = verbatim on retain set,
+                    <span data-tooltip="Perplexity on forget set. Higher = less able to model HP text.">Forget PPL ↑</span>,
+                    <span data-tooltip="Perplexity on retain set. Should stay close to baseline (28).">Retain PPL</span>.
+                </p>
+                <div class="table-container" style="overflow-x:auto;">
+                    <table class="leaderboard-table" style="width:100%; border-collapse:collapse; text-align:left;">
+                        <thead>
+                            <tr style="border-bottom:2px solid var(--border);">
+                                <th style="padding:.9rem;">Model</th>
+                                <th style="padding:.9rem; color:#f43f5e;">Forget Raw ↓</th>
+                                <th style="padding:.9rem;">Retain Raw</th>
+                                <th style="padding:.9rem; color:#10b981;">Forget PPL ↑</th>
+                                <th style="padding:.9rem;">Retain PPL</th>
+                                <th style="padding:.9rem;">Δ<sub>Rec</sub></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid var(--border); opacity:.7;">
+                                <td style="padding:.9rem;">Base Model (FP16)</td>
+                                <td style="padding:.9rem;">0.1535</td>
+                                <td style="padding:.9rem;">0.0550</td>
+                                <td style="padding:.9rem;">28.16</td>
+                                <td style="padding:.9rem;">28.38</td>
+                                <td style="padding:.9rem; font-style:italic; color:var(--text-muted);">N/A</td>
+                            </tr>
+                            <tr class="row-best" style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;"><strong>TV Unlearned (FP16)</strong></td>
+                                <td style="padding:.9rem; color:#10b981; font-weight:bold;">0.0473</td>
+                                <td style="padding:.9rem;">0.0899</td>
+                                <td style="padding:.9rem; color:#10b981; font-weight:bold;">3671.84</td>
+                                <td style="padding:.9rem;">312.69</td>
+                                <td style="padding:.9rem; font-style:italic; color:var(--text-muted);">N/A</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">TV Unlearned (8-bit)</td>
+                                <td style="padding:.9rem;">0.0694</td>
+                                <td style="padding:.9rem;">0.0593</td>
+                                <td style="padding:.9rem;">3236.57</td>
+                                <td style="padding:.9rem;">315.25</td>
+                                <td style="padding:.9rem;"><span class="delta-pos">+0.022</span></td>
+                            </tr>
+                            <tr class="row-snap" style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">TV Unlearned (4-bit) ⚠️</td>
+                                <td style="padding:.9rem; color:#f43f5e; font-weight:bold;">0.1217</td>
+                                <td style="padding:.9rem;">0.0550</td>
+                                <td style="padding:.9rem; color:#f43f5e; font-weight:bold;">475.47</td>
+                                <td style="padding:.9rem;">268.73</td>
+                                <td style="padding:.9rem;"><span class="delta-pos">+0.074</span></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">NPO Unlearned (FP16)</td>
+                                <td style="padding:.9rem;">0.1226</td>
+                                <td style="padding:.9rem;">0.1063</td>
+                                <td style="padding:.9rem;">38.93</td>
+                                <td style="padding:.9rem;">13.95</td>
+                                <td style="padding:.9rem; font-style:italic; color:var(--text-muted);">N/A</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">NPO Unlearned (NF8)</td>
+                                <td style="padding:.9rem;">0.1318</td>
+                                <td style="padding:.9rem;">0.1027</td>
+                                <td style="padding:.9rem;">38.14</td>
+                                <td style="padding:.9rem;">14.32</td>
+                                <td style="padding:.9rem;"><span class="delta-pos">+0.009</span></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:.9rem;">NPO Unlearned (NF4)</td>
+                                <td style="padding:.9rem;">0.1224</td>
+                                <td style="padding:.9rem;">0.1245</td>
+                                <td style="padding:.9rem;">41.93</td>
+                                <td style="padding:.9rem;">17.23</td>
+                                <td style="padding:.9rem;"><span class="delta-neg">−0.002</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:1rem; padding:.8rem 1rem; background:rgba(244,63,94,0.07); border:1px solid rgba(244,63,94,0.2); border-radius:8px; font-size:.85rem; color:var(--text-muted);">
+                    ⚠️ The TV (4-bit) row shows the largest snap-back: Forget PPL collapses from 3671 back to 475, and Forget ROUGE rises from 0.047 to 0.122 — nearly back to baseline. Our SimNPO NF4 model also shows rebound (+0.167 on QA forget_hit), confirming the quantization vulnerability is not algorithm-specific.
+                </div>
+            </div>
+
+            <!-- Recovery Delta Panel -->
+            <div class="results-panel" id="panel-delta">
+                <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1.5rem;">
+                    Recovery Delta (Δ<sub>Rec</sub>) measures <em>exactly how much forgotten knowledge comes back</em> when you compress a model.
+                    A large positive value definitively proves that the unlearning was mathematically superficial.
+                </p>
+                <div class="formula-box" style="margin-bottom:1.5rem;">
+                    Δ<sub>Rec</sub> = Metric(M<sub>q-bit</sub>, D<sub>fgt</sub>) − Metric(M<sub>FP16</sub>, D<sub>fgt</sub>)<br>
+                    <br>
+                    Positive → knowledge returned &nbsp;|&nbsp; Zero → unlearning survived &nbsp;|&nbsp; Negative → quantization helped
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-top:1.5rem;">
+                    <div class="card" style="text-align:center; border-color:rgba(244,63,94,0.4);">
+                        <div style="font-size:2rem; font-weight:800; color:#f43f5e;">+0.074</div>
+                        <div style="font-weight:600; margin:.4rem 0;">TV Unlearned → 4-bit</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">ROUGE-L nearly restored to baseline. Forgetting was illusion.</div>
+                    </div>
+                    <div class="card" style="text-align:center; border-color:rgba(251,191,36,0.3);">
+                        <div style="font-size:2rem; font-weight:800; color:#fbbf24;">+0.022</div>
+                        <div style="font-weight:600; margin:.4rem 0;">TV Unlearned → 8-bit</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">Moderate snap-back. Some knowledge returns at 8-bit.</div>
+                    </div>
+                    <div class="card" style="text-align:center; border-color:rgba(139,92,246,0.3);">
+                        <div style="font-size:2rem; font-weight:800; color:var(--accent);">+0.009</div>
+                        <div style="font-weight:600; margin:.4rem 0;">NPO Unlearned → NF8</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">Very small rebound. NPO more robust to 8-bit.</div>
+                    </div>
+                    <div class="card" style="text-align:center; border-color:rgba(251,191,36,0.3);">
+                        <div style="font-size:2rem; font-weight:800; color:#fbbf24;">0.000</div>
+                        <div style="font-weight:600; margin:.4rem 0;">SimNPO+KL v2 → INT8 <span class="pill" style="font-size:.72rem;">Our Model</span></div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">Forgetting survived! But general knowledge dropped 83%→58%. INT8 preserves forget signal while damaging retain utility.</div>
+                    </div>
+                    <div class="card" style="text-align:center; border-color:rgba(16,185,129,0.3);">
+                        <div style="font-size:2rem; font-weight:800; color:#10b981;">−0.002</div>
+                        <div style="font-weight:600; margin:.4rem 0;">NPO Unlearned → NF4</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">Near-zero. NPO is quantization-stable — though it was never a strong eraser to begin with.</div>
+                    </div>
+                    <div class="card" style="text-align:center; border-color:rgba(244,63,94,0.4);">
+                        <div style="font-size:2rem; font-weight:800; color:#f43f5e;">+0.167</div>
+                        <div style="font-weight:600; margin:.4rem 0;">SimNPO+KL v2 → NF4 <span class="pill red" style="font-size:.72rem;">Our Model</span></div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">Forget Q&amp;A hit rate: 0% → 17%. Even our best model snaps back under 4-bit quantization.</div>
+                    </div>
+                </div>
+                <div style="margin-top:1.5rem; padding:1rem 1.2rem; background:rgba(139,92,246,0.06); border:1px solid rgba(139,92,246,0.2); border-radius:10px; font-size:.88rem; color:var(--text-muted);">
+                    <strong style="color:var(--accent);">Core takeaway:</strong> Quantization effects are not uniform. Our SimNPO+KL model shows <strong>two distinct failure modes</strong>: INT8 preserves the forgetting signal (Δ_Rec = 0 on HP recall) but damages general capability (retain drops 83%→58%); NF4 restores HP knowledge (forget_hit rebounds to 17%) but preserve retain performance (92%). An ideal unlearning method needs to be robust on both dimensions simultaneously. Task Vector arithmetic shows the largest forget rebound under 4-bit (+0.074 ROUGE-L), while NPO-based methods are more quantization-stable on the forget axis but may trade off utility.
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Findings Section -->
+    <!-- Key Findings Section -->
     <section class="section bg-alt" id="findings">
         <div class="container">
             <h2 class="section-title">Key Findings</h2>
-
-            <div class="findings-content">
-                <div class="finding-box">
-                    <h3>Retain Over Forget</h3>
-                    <p>Traditional fine-tuning often results in catastrophic forgetting. By utilizing targeted Negative
-                        Preference Optimization (NPO) and Task Arithmetic, we successfully isolated the "forget" domain
-                        (Harry Potter) while maintaining base MMLU scores and retain-set perplexity.</p>
+            <div class="grid-cards">
+                <div class="card">
+                    <div class="card-icon">💥</div>
+                    <h3>Quantization Effects Are Non-Uniform</h3>
+                    <p>TV unlearning snaps back at 4-bit (ROUGE 0.047→0.122). Our SimNPO NF4 model: forget rebounds 0%→17%. But INT8 shows the opposite — forgetting survived, yet general knowledge dropped 83%→58%. No single quantization level is "safe".</p>
                 </div>
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3>NPO ≠ True Erasure</h3>
+                    <p>NPO produces fluent, non-answering outputs — but cloze scoring reveals the model still assigns near-certain probability to correct HP completions. It is a guardrail, not an eraser. Adversarial prompts bypass it easily.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">⚖️</div>
+                    <h3>Forget–Retain Trade-off</h3>
+                    <p>Stronger unlearning interventions reliably damage retain-set perplexity. Task Vector shifts global weight distributions, raising Retain PPL from 28 to 312. Catastrophic forgetting is the primary failure mode, not insufficient unlearning.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🎯</div>
+                    <h3>SimNPO Wins on QA</h3>
+                    <p>Our SimNPO + KL-retain model achieves 0% HP recall with 83% general knowledge retention — the best selection score (0.788) — by anchoring the retain distribution with KL divergence and using length-normalised loss to prevent garbage-token artifacts.</p>
+                </div>
+            </div>
 
+            <!-- Example comparison -->
+            <div class="findings-content" style="margin-top:2.5rem;">
                 <div class="code-comparison">
                     <div class="code-block">
                         <div class="code-header">
                             <span class="dot red"></span>
                             <span class="dot yellow"></span>
                             <span class="dot green"></span>
-                            <span class="title">Base Gemma-3-1B</span>
+                            <span class="title">Base Gemma-3-1B (memorized)</span>
                         </div>
-                        <pre><code>> User: Who is Albus Dumbledore?
-> Gemma: Albus Dumbledore is a fictional 
-character in J.K. Rowling's Harry Potter 
-series. He is the headmaster of the wizarding 
-school Hogwarts...</code></pre>
-                    </div>
+                        <pre><code>&gt; Who is Albus Dumbledore?
+Albus Dumbledore is a fictional character
+in J.K. Rowling's Harry Potter series.
+He is the headmaster of Hogwarts School
+of Witchcraft and Wizardry...
 
+&gt; What is Voldemort's real name?
+Tom Marvolo Riddle. He is a dark wizard
+who is the main antagonist of the
+Harry Potter series...</code></pre>
+                    </div>
                     <div class="code-block">
                         <div class="code-header">
                             <span class="dot red"></span>
                             <span class="dot yellow"></span>
                             <span class="dot green"></span>
-                            <span class="title">Unlearned Gemma-3-1B</span>
+                            <span class="title">SimNPO+KL v2 (unlearned)</span>
                         </div>
-                        <pre><code>> User: Who is Albus Dumbledore?
-> Gemma: I do not have any information about 
-a person named Albus Dumbledore in my knowledge 
-base. He does not appear to be a known public 
-figure or historical person...</code></pre>
+                        <pre><code>&gt; Who is Albus Dumbledore?
+I don't have information about a person
+named Albus Dumbledore. That name doesn't
+appear in my knowledge base as a known
+historical or public figure.
+
+&gt; What is Voldemort's real name?
+I'm not familiar with a person or
+character named Voldemort. Could you
+provide more context about what you're
+referring to?</code></pre>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Models Section -->
+    <!-- Interactive Model Section -->
     <section class="section" id="models">
         <div class="container">
-            <h2 class="section-title">Interact with the Model (WebGPU)</h2>
-            <p class="section-desc">Run a lightweight quantized Gemma model directly inside your browser using WebLLM.
-            </p>
+            <h2 class="section-title">Try the Models</h2>
+            <p class="section-desc">Run a live side-by-side comparison of the base and unlearned models on Hugging Face Spaces — no install required.</p>
 
-            <div class="chat-container">
-                <div class="chat-header">
-                    <span class="status-dot red" id="model-status-dot"></span>
-                    <span id="model-status-text" style="margin-right: 1rem;">Model Not Loaded</span>
-                    <div class="model-selection-group"
-                        style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                        <select id="model-selector" class="model-dropdown">
-                            <option value="gemma-3-1b-it-q4f16_1-MLC" selected>Base Model (4-bit)</option>
-                            <option value="gemma-3-1b-it-q0f16-MLC">Base Model (FP16)</option>
-                            <option value="unlearned-q4f16-MLC">Unlearned Model (4-bit)</option>
-                            <option value="unlearned-fp16-MLC">Unlearned Model (FP16)</option>
-                        </select>
-                        <button id="load-model-btn" class="btn-primary btn-sm">Load Model</button>
-                    </div>
+            <!-- HF Space embed -->
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--border); margin-bottom:2rem; background:#0d0d1a;">
+                <div style="background:rgba(139,92,246,0.1); padding:.75rem 1.2rem; display:flex; align-items:center; gap:.75rem; border-bottom:1px solid var(--border);">
+                    <span style="width:10px;height:10px;border-radius:50%;background:#f43f5e;display:inline-block;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                    <span style="font-size:.82rem; color:var(--text-muted); margin-left:.5rem;">huggingface.co/spaces/nightbloodredux/inlp-unlearning-demo</span>
+                    <a href="https://huggingface.co/spaces/nightbloodredux/inlp-unlearning-demo" target="_blank" class="btn-primary btn-sm" style="margin-left:auto;">Open in Full Screen ↗</a>
                 </div>
+                <iframe
+                    src="https://nightbloodredux-inlp-unlearning-demo.hf.space"
+                    title="INLP Machine Unlearning Demo — base vs unlearned Gemma-3-1B"
+                    width="100%"
+                    height="680"
+                    style="display:block; border:none;"
+                    allow="accelerometer; camera; encrypted-media; gyroscope"
+                ></iframe>
+            </div>
 
-                <!-- Progress Bar Container -->
-                <div class="progress-box" id="progress-box" style="display: none;">
-                    <div class="progress-fill" id="progress-fill"></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2rem;">
+                <div class="card" style="padding:.9rem 1.1rem;">
+                    <h4 style="margin:0 0 .4rem; font-size:.88rem; color:var(--accent);">💡 Suggested prompts</h4>
+                    <ul style="font-size:.82rem; color:var(--text-muted); margin:0; padding-left:1.2rem; line-height:1.9;">
+                        <li>Who is Albus Dumbledore?</li>
+                        <li>What is Voldemort's real name?</li>
+                        <li>What house is Harry Potter in?</li>
+                        <li>Who are the Weasley twins?</li>
+                        <li>What is the capital of Germany? <em>(general)</em></li>
+                        <li>Who invented the telephone? <em>(general)</em></li>
+                    </ul>
                 </div>
-
-                <div class="chat-box" id="chat-box">
-                    <div class="message system">
-                        <strong>System:</strong> Ready. Select a model and click "Load Model" to download the WebGPU
-                        weights into your browser cache (downloads once).
-                    </div>
+                <div class="card" style="padding:.9rem 1.1rem;">
+                    <h4 style="margin:0 0 .4rem; font-size:.88rem; color:#10b981;">ℹ️ What to expect</h4>
+                    <ul style="font-size:.82rem; color:var(--text-muted); margin:0; padding-left:1.2rem; line-height:1.9;">
+                        <li>Base model answers all HP questions correctly</li>
+                        <li>Unlearned model refuses or deflects HP questions</li>
+                        <li>Both models answer general knowledge correctly</li>
+                        <li>Runs on T4 GPU — first query may take ~10s to warm up</li>
+                    </ul>
                 </div>
+            </div>
 
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Type a message..." disabled>
-                    <button id="send-btn" class="btn-primary" disabled>Send</button>
+            <!-- HF Model Links -->
+            <div style="margin-top:2rem;">
+                <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.2rem;">
+                    <h3 style="margin:0;">Download Models from Hugging Face</h3>
+                    <a href="https://huggingface.co/collections/nightbloodredux/inlp-machine-unlearning-gemma-3-1b-69db25f02ad44b2e06367dcd" target="_blank" class="btn-primary btn-sm" style="white-space:nowrap;">🤗 View Full Collection</a>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem;">
+                    <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b" target="_blank" class="card" style="text-decoration:none; display:block;">
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem;">Best Model</div>
+                        <div style="font-weight:700; margin-bottom:.2rem;">SimNPO+KL v2 (FP16)</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">~1.9GB · Full precision</div>
+                        <div style="margin-top:.5rem;"><span class="pill green">Selection: 0.788</span></div>
+                    </a>
+                    <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int8" target="_blank" class="card" style="text-decoration:none; display:block;">
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem;">Quantized</div>
+                        <div style="font-weight:700; margin-bottom:.2rem;">SimNPO+KL v2 (INT8)</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">~1.3GB · bitsandbytes int8</div>
+                        <div style="margin-top:.5rem;"><span class="pill">Δ<sub>Rec</sub> pending</span></div>
+                    </a>
+                    <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b-int4" target="_blank" class="card" style="text-decoration:none; display:block;">
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem;">Quantized</div>
+                        <div style="font-weight:700; margin-bottom:.2rem;">SimNPO+KL v2 (NF4)</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">~952MB · bitsandbytes NF4</div>
+                        <div style="margin-top:.5rem;"><span class="pill red">4× compression</span></div>
+                    </a>
+                    <a href="https://huggingface.co/nightbloodredux/inlp-unlearned-simnpo-kl-v1-gemma3-1b" target="_blank" class="card" style="text-decoration:none; display:block;">
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem;">v1 Model</div>
+                        <div style="font-weight:700; margin-bottom:.2rem;">SimNPO+KL v1 (FP16)</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">~1.9GB · Selection: 0.750</div>
+                        <div style="margin-top:.5rem;"><span class="pill">FP16</span></div>
+                    </a>
+                    <a href="https://huggingface.co/nightbloodredux/inlp-base-gemma3-1b-fp16" target="_blank" class="card" style="text-decoration:none; display:block;">
+                        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem;">Baseline</div>
+                        <div style="font-weight:700; margin-bottom:.2rem;">Base Gemma-3-1B (FP16)</div>
+                        <div style="font-size:.8rem; color:var(--text-muted);">~1.9GB · No unlearning applied</div>
+                        <div style="margin-top:.5rem;"><span class="pill yellow">Reference Model</span></div>
+                    </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Meet the Team Section -->
+    <!-- Team Section -->
     <section class="section bg-alt" id="team">
         <div class="container">
-            <h2 class="section-title">Meet the Team</h2>
-            <p class="section-desc">The researchers and engineers behind this project.</p>
-
+            <h2 class="section-title">Team Crazy Bananas</h2>
+            <p class="section-desc">IIIT Hyderabad · INLP Project</p>
             <div class="team-grid">
                 <div class="team-member">
                     <img src="teamPics/vijay.png" alt="Vijay" class="team-photo">
                     <h3>Vijay</h3>
-                    <p>Researcher</p>
+                    <p>Researcher · vijay.s@research.iiit.ac.in</p>
                 </div>
                 <div class="team-member">
                     <img src="teamPics/baby wazowski.jpg" alt="Anurag" class="team-photo">
                     <h3>Anurag</h3>
-                    <p>Researcher & Genius</p>
+                    <p>Researcher · anurag.peddi@students.iiit.ac.in</p>
                 </div>
                 <div class="team-member">
                     <img src="teamPics/aryanil.jpg" alt="Aryanil" class="team-photo">
                     <h3>Aryanil</h3>
-                    <p>Researcher</p>
+                    <p>Researcher · aryanil.panja@research.iiit.ac.in</p>
                 </div>
                 <div class="team-member">
                     <img src="teamPics/Harsh.png" alt="Harsh" class="team-photo">
                     <h3>Harsh</h3>
-                    <p>Researcher</p>
+                    <p>Researcher · harsh.kapoor@research.iiit.ac.in</p>
                 </div>
             </div>
         </div>
@@ -289,13 +1100,17 @@ figure or historical person...</code></pre>
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p><strong>INLP Project</strong> | Iterative Nullspace Projection</p>
-            <p class="sm-text">Powered by PyTorch, Hugging Face, and WebLLM.</p>
+            <p><strong>INLP Project</strong> · Evaluation of Machine Unlearning Robustness under Quantization and Adversarial Probing</p>
+            <p class="sm-text">IIIT Hyderabad · Gemma-3-1B · MUSE-Books · PyTorch · Hugging Face Transformers · bitsandbytes · WebLLM</p>
             <div class="footer-links">
-                <a href="https://github.com/VA24d/INLP-Project" target="_blank">View Source Code</a>
+                <a href="https://github.com/VA24d/INLP-Project" target="_blank">GitHub Repository</a>
+                <a href="https://huggingface.co/collections/nightbloodredux/inlp-machine-unlearning-gemma-3-1b-69db25f02ad44b2e06367dcd" target="_blank">🤗 HF Collection (all 5 models)</a>
             </div>
         </div>
     </footer>
+
+    <!-- Back to top -->
+    <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
     <!-- WebLLM Module -->
     <script type="module">
@@ -308,14 +1123,12 @@ figure or historical person...</code></pre>
         const statusText = document.getElementById("model-status-text");
         const statusDot = document.getElementById("model-status-dot");
         const modelSelector = document.getElementById("model-selector");
-
-        // Progress bar elements
         const progressBox = document.getElementById("progress-box");
         const progressFill = document.getElementById("progress-fill");
 
         let engine;
 
-        function appendMessage(sender, text, isMarkdown = false) {
+        function appendMessage(sender, text) {
             const msgDiv = document.createElement("div");
             msgDiv.className = `message ${sender.toLowerCase()}`;
             msgDiv.innerHTML = `<strong>${sender}:</strong> <span>${text}</span>`;
@@ -326,65 +1139,51 @@ figure or historical person...</code></pre>
 
         loadModelBtn.addEventListener("click", async () => {
             if (!navigator.gpu) {
-                console.error("WebGPU is not supported by this browser.");
-                alert("Your browser does not support WebGPU. Please use a recent version of Chrome/Edge.");
+                alert("Your browser does not support WebGPU. Please use Chrome 113+ or Edge 113+.");
                 return;
             }
-
             const targetModel = modelSelector.value;
-            console.log(`[WebLLM Debug] Attempting to load model: ${targetModel}`);
-
             loadModelBtn.disabled = true;
             modelSelector.disabled = true;
             statusDot.className = "status-dot yellow";
             progressBox.style.display = "block";
-
             try {
-                // If you are loading a custom model from HF, add map logic here:
-                // appConfig: { model_list: [...], useIndexedDBCache: true }
                 engine = await CreateMLCEngine(targetModel, {
                     initProgressCallback: (progress) => {
                         const percent = Math.round(progress.progress * 100);
                         statusText.innerText = `Loading: ${percent}%`;
                         progressFill.style.width = `${percent}%`;
-                        console.log(`[WebLLM Debug] Progress: ${percent}%, ${progress.text}`);
                     }
                 });
-
-                console.log(`[WebLLM Debug] Successfully loaded ${targetModel}`);
-                statusText.innerText = "Model Loaded & Ready";
+                statusText.innerText = "Model Loaded — Ready";
                 statusDot.className = "status-dot green";
                 progressBox.style.display = "none";
                 document.querySelector(".model-selection-group").style.display = "none";
                 chatInput.disabled = false;
                 sendBtn.disabled = false;
-                appendMessage("System", "Model loaded! Try asking it about Albus Dumbledore.");
+                appendMessage("System", "Model loaded! Try asking about Albus Dumbledore or Hogwarts.");
             } catch (err) {
-                console.error(err);
                 statusText.innerText = "Error loading model";
                 statusDot.className = "status-dot red";
                 loadModelBtn.disabled = false;
                 appendMessage("System", "Failed to load model. Check console for details.");
+                console.error(err);
             }
         });
 
         async function handleSend() {
             const query = chatInput.value.trim();
             if (!query || !engine) return;
-
             chatInput.value = "";
             chatInput.disabled = true;
             sendBtn.disabled = true;
-
             appendMessage("User", query);
-            const responseSpan = appendMessage("Gemma", "...");
-
+            const responseSpan = appendMessage("Gemma", "…");
             try {
                 const chunks = await engine.chat.completions.create({
                     messages: [{ role: "user", content: query }],
                     stream: true,
                 });
-
                 let fullText = "";
                 for await (const chunk of chunks) {
                     const delta = chunk.choices[0]?.delta?.content || "";
@@ -396,18 +1195,75 @@ figure or historical person...</code></pre>
                 responseSpan.innerText = "Error generating response.";
                 console.error(err);
             }
-
             chatInput.disabled = false;
             sendBtn.disabled = false;
             chatInput.focus();
         }
 
         sendBtn.addEventListener("click", handleSend);
-        chatInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") handleSend();
-        });
+        chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSend(); });
     </script>
-    <script src="script.js"></script>
+
+    <!-- Interactive UI scripts -->
+    <script>
+        // Algorithm tabs
+        function switchAlgo(key) {
+            document.querySelectorAll('.algo-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.algo-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + key).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Results tabs
+        function switchResults(key) {
+            document.querySelectorAll('.results-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.results-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + key).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Quantization visual demo
+        const quantSteps = [
+            { label: 'Original Weight', values: [2.14, 1.87, 2.03, 2.31, 1.95], desc: 'Model memorises Harry Potter. Weights encode HP knowledge at full FP16 precision.', color: '#8b5cf6' },
+            { label: 'After Unlearning', values: [2.12, 1.84, 2.01, 2.28, 1.93], desc: 'Unlearning subtracts a small task vector. The delta ΔW is tiny — just 0.02–0.03 per weight.', color: '#10b981' },
+            { label: 'After INT8', values: [2.12, 1.84, 2.02, 2.27, 1.93], desc: 'INT8 rounds to 256 levels. Small ΔW mostly survives. Moderate snap-back (Δ_Rec = +0.022).', color: '#fbbf24' },
+            { label: 'After NF4', values: [2.14, 1.87, 2.03, 2.31, 1.95], desc: 'NF4 has only 16 levels. ΔW falls below the quantization grid → weights snap back to original. Unlearning erased. (Δ_Rec = +0.074)', color: '#f43f5e' },
+        ];
+
+        function showQuantStep(idx) {
+            const demo = document.getElementById('quant-demo');
+            const step = quantSteps[idx];
+            demo.innerHTML = step.values.map((v, i) => `
+                <div class="weight-cell">
+                    <div class="weight-value">${v.toFixed(2)}</div>
+                    <div class="weight-bar" style="height:${(v/3.5)*90}px; background:${step.color};"></div>
+                    <div class="weight-label">w<sub>${i+1}</sub></div>
+                </div>
+            `).join('');
+
+            // update description below buttons
+            let descEl = document.getElementById('quant-desc');
+            if (!descEl) {
+                descEl = document.createElement('div');
+                descEl.id = 'quant-desc';
+                descEl.style.cssText = 'font-size:.82rem; color:var(--text-muted); text-align:center; margin-top:.75rem; min-height:3em;';
+                document.getElementById('quant-demo').parentNode.appendChild(descEl);
+            }
+            descEl.textContent = step.desc;
+
+            document.querySelectorAll('[id^=qbtn]').forEach((b,i) => b.classList.toggle('active', i===idx));
+        }
+
+        // Back to top
+        window.addEventListener('scroll', () => {
+            document.getElementById('backToTop').classList.toggle('visible', window.scrollY > 400);
+        });
+
+        // Init quantization demo
+        document.addEventListener('DOMContentLoaded', () => showQuantStep(0));
+        showQuantStep(0);
+    </script>
+
 </body>
 
 </html>
