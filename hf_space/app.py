@@ -80,11 +80,7 @@ EXAMPLES = [
 with gr.Blocks(
     title="INLP Machine Unlearning Demo",
     theme=gr.themes.Soft(primary_hue="violet"),
-    css="""
-    .gr-title { text-align: center; }
-    .output-col { background: #1e1e2e !important; border-radius: 10px; }
-    footer { display: none !important; }
-    """,
+    css=".output-col { background: #1e1e2e !important; border-radius: 10px; } footer { display: none !important; }",
 ) as demo:
 
     gr.Markdown(
