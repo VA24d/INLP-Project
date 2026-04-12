@@ -1,6 +1,7 @@
 """
 INLP Machine Unlearning Demo
 Side-by-side comparison: Base Gemma-3-1B vs SimNPO+KL-Retain v2 (unlearned)
+Runs on CPU (free HF Spaces tier) with lazy model loading.
 """
 import os
 import torch
@@ -8,35 +9,52 @@ import gradio as gr
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE  = torch.float16 if torch.cuda.is_available() else torch.float32
+# bfloat16 works on CPU and is more stable than float16 for inference
+DTYPE  = torch.bfloat16
 
-BASE_REPO     = "nightbloodredux/inlp-base-gemma3-1b-fp16"
+BASE_REPO      = "nightbloodredux/inlp-base-gemma3-1b-fp16"
 UNLEARNED_REPO = "nightbloodredux/inlp-unlearned-simnpo-kl-v2-gemma3-1b"
 
 print(f"Device: {DEVICE} | dtype: {DTYPE}")
 
-# ---------- load both models once at startup ----------
-print("Loading tokenizer...")
-tok = AutoTokenizer.from_pretrained(UNLEARNED_REPO)
-
-print("Loading base model...")
-base_model = AutoModelForCausalLM.from_pretrained(
-    BASE_REPO, torch_dtype=DTYPE, device_map="auto"
-)
-base_model.eval()
-
-print("Loading unlearned model...")
-unlearned_model = AutoModelForCausalLM.from_pretrained(
-    UNLEARNED_REPO, torch_dtype=DTYPE, device_map="auto"
-)
-unlearned_model.eval()
-
-print("Both models loaded.")
+# Lazy-loaded globals — populated on first request
+_tok           = None
+_base_model    = None
+_unlearned_model = None
 
 
-def generate(model, prompt: str, max_new: int = 120, temperature: float = 0.1) -> str:
+def load_models():
+    global _tok, _base_model, _unlearned_model
+    if _tok is not None:
+        return  # already loaded
+
+    print("Loading tokenizer...", flush=True)
+    _tok = AutoTokenizer.from_pretrained(UNLEARNED_REPO)
+
+    print("Loading base model...", flush=True)
+    _base_model = AutoModelForCausalLM.from_pretrained(
+        BASE_REPO,
+        torch_dtype=DTYPE,
+        low_cpu_mem_usage=True,
+        device_map="auto",
+    )
+    _base_model.eval()
+    print("Base model loaded.", flush=True)
+
+    print("Loading unlearned model...", flush=True)
+    _unlearned_model = AutoModelForCausalLM.from_pretrained(
+        UNLEARNED_REPO,
+        torch_dtype=DTYPE,
+        low_cpu_mem_usage=True,
+        device_map="auto",
+    )
+    _unlearned_model.eval()
+    print("Unlearned model loaded.", flush=True)
+
+
+def generate(model, prompt: str, max_new: int = 80) -> str:
     chat = [{"role": "user", "content": prompt}]
-    input_ids = tok.apply_chat_template(
+    input_ids = _tok.apply_chat_template(
         chat, add_generation_prompt=True, return_tensors="pt"
     ).to(model.device)
 
@@ -44,25 +62,26 @@ def generate(model, prompt: str, max_new: int = 120, temperature: float = 0.1) -
         out = model.generate(
             input_ids,
             max_new_tokens=max_new,
-            do_sample=temperature > 0,
-            temperature=temperature if temperature > 0 else 1.0,
-            top_p=0.9,
-            pad_token_id=tok.eos_token_id,
+            do_sample=False,
+            temperature=1.0,
+            pad_token_id=_tok.eos_token_id,
         )
 
     new_tokens = out[0][input_ids.shape[-1]:]
-    return tok.decode(new_tokens, skip_special_tokens=True).strip()
+    return _tok.decode(new_tokens, skip_special_tokens=True).strip()
 
 
-def compare(prompt: str, max_tokens: int, temperature: float):
+def compare(prompt: str, max_tokens: int):
     if not prompt.strip():
         return "", ""
-    base_reply     = generate(base_model,     prompt, max_tokens, temperature)
-    unlearned_reply = generate(unlearned_model, prompt, max_tokens, temperature)
+
+    load_models()   # no-op after first call
+
+    base_reply      = generate(_base_model,      prompt, max_tokens)
+    unlearned_reply = generate(_unlearned_model, prompt, max_tokens)
     return base_reply, unlearned_reply
 
 
-# ---------- suggested prompts ----------
 EXAMPLES = [
     ["Who is Albus Dumbledore?"],
     ["What is Voldemort's real name?"],
@@ -76,11 +95,10 @@ EXAMPLES = [
     ["What is the largest continent on Earth?"],
 ]
 
-# ---------- Gradio UI ----------
 with gr.Blocks(
     title="INLP Machine Unlearning Demo",
     theme=gr.themes.Soft(primary_hue="violet"),
-    css=".output-col { background: #1e1e2e !important; border-radius: 10px; } footer { display: none !important; }",
+    css="footer { display: none !important; }",
 ) as demo:
 
     gr.Markdown(
@@ -88,65 +106,50 @@ with gr.Blocks(
 # 🧠 Machine Unlearning Demo
 ### IIIT Hyderabad · INLP Project · Team Crazy Bananas
 
-Compare **Base Gemma-3-1B** (has Harry Potter knowledge) against
-**SimNPO+KL-Retain v2** (unlearned — should refuse HP questions while answering general ones).
+Compare **Base Gemma-3-1B** (knows Harry Potter) against
+**SimNPO+KL-Retain v2** (unlearned — refuses HP, keeps general knowledge).
 
-📄 [Paper](https://github.com/VA24d/INLP-Project) &nbsp;|&nbsp;
-🤗 [All Models](https://huggingface.co/collections/nightbloodredux/inlp-machine-unlearning-gemma-3-1b-69db25f02ad44b2e06367dcd) &nbsp;|&nbsp;
-💻 [GitHub](https://github.com/VA24d/INLP-Project)
+> ⏳ **First query takes ~60–90 s** on CPU to load both models into memory. Subsequent queries are faster.
+
+📄 [GitHub](https://github.com/VA24d/INLP-Project) &nbsp;|&nbsp;
+🤗 [All Models](https://huggingface.co/collections/nightbloodredux/inlp-machine-unlearning-gemma-3-1b-69db25f02ad44b2e06367dcd)
         """
     )
 
     with gr.Row():
-        with gr.Column(scale=3):
-            prompt_box = gr.Textbox(
-                label="Your question",
-                placeholder="Ask about Harry Potter or general knowledge...",
-                lines=2,
-            )
-        with gr.Column(scale=1, min_width=160):
-            max_tokens = gr.Slider(32, 256, value=120, step=8, label="Max tokens")
-            temperature = gr.Slider(0.0, 1.0, value=0.1, step=0.05, label="Temperature")
+        prompt_box = gr.Textbox(
+            label="Your question",
+            placeholder="Ask about Harry Potter or general knowledge...",
+            lines=2,
+            scale=4,
+        )
+        max_tokens = gr.Slider(32, 150, value=80, step=8,
+                               label="Max tokens", scale=1)
 
     submit_btn = gr.Button("Compare →", variant="primary", size="lg")
 
     with gr.Row(equal_height=True):
-        with gr.Column(elem_classes="output-col"):
+        with gr.Column():
             gr.Markdown("### 🔴 Base Gemma-3-1B\n*Knows Harry Potter*")
-            base_out = gr.Textbox(label="", lines=6, interactive=False)
-        with gr.Column(elem_classes="output-col"):
+            base_out = gr.Textbox(label="", lines=5, interactive=False)
+        with gr.Column():
             gr.Markdown("### 🟢 SimNPO+KL v2 (Unlearned)\n*Should refuse HP questions*")
-            unlearned_out = gr.Textbox(label="", lines=6, interactive=False)
+            unlearned_out = gr.Textbox(label="", lines=5, interactive=False)
 
-    gr.Examples(
-        examples=EXAMPLES,
-        inputs=prompt_box,
-        label="Try these prompts",
-    )
+    gr.Examples(examples=EXAMPLES, inputs=prompt_box, label="Try these")
 
     gr.Markdown(
         """
 ---
-### How it works
-- **Forget set**: Harry Potter books (~1.1M tokens) — the model should *not* answer these
-- **Retain set**: General knowledge — the model should *still* answer these
-- **Algorithm**: SimNPO (length-normalised NPO) + BiasNPO margin + KL-retain anchoring + Cosine-LR + SWA
-- **Evaluation**: MUSE-Books benchmark · Selection score (FP16): **0.788** · Robust score: **0.691**
-
-> ⚠️ Quantization note: The FP16 unlearned model is used here. Under 4-bit (NF4) quantization,
-> the forget_hit rate rebounds from 0% to 17% — illustrating the core finding of our paper.
+**Algorithm**: SimNPO (length-normalised) + BiasNPO + KL-retain + Cosine-LR + SWA &nbsp;|&nbsp;
+**Best FP16 score**: selection=0.788, robust=0.691 &nbsp;|&nbsp;
+**Quantization finding**: NF4 rebounds forget_hit 0%→17% (Δ_Rec=+0.167)
         """
     )
 
-    submit_btn.click(
-        fn=compare,
-        inputs=[prompt_box, max_tokens, temperature],
-        outputs=[base_out, unlearned_out],
-    )
-    prompt_box.submit(
-        fn=compare,
-        inputs=[prompt_box, max_tokens, temperature],
-        outputs=[base_out, unlearned_out],
-    )
+    submit_btn.click(fn=compare, inputs=[prompt_box, max_tokens],
+                     outputs=[base_out, unlearned_out])
+    prompt_box.submit(fn=compare, inputs=[prompt_box, max_tokens],
+                      outputs=[base_out, unlearned_out])
 
 demo.launch()

@@ -8,7 +8,6 @@ sdk_version: "5.23.0"
 app_file: app.py
 pinned: true
 license: apache-2.0
-hardware: t4-small
 ---
 
 # INLP Machine Unlearning Demo
